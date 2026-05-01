@@ -50,7 +50,7 @@ export function Hero() {
         >
           <Sparkles className="w-4 h-4 text-accent" />
           <span className="text-sm text-accent font-medium">
-            Trusted by 500+ B.Tech Students
+            Trusted by 1000+ B.Tech Students
           </span>
         </motion.div>
 
