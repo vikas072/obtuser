@@ -10,7 +10,7 @@ import { useRazorpay } from "@/src/hooks/useRazorpay";
 
 export function Hero() {
   const router = useRouter();
-  const { user, isPaid, login } = useAuth() as any;
+  const { user, isPaid, loading, login } = useAuth() as any;
   const { startPayment, isLoading } = useRazorpay();
 
   const handleGoogleLogin = async () => {
@@ -88,10 +88,15 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 min-h-[60px]"
         >
+          {/* While auth is loading, show a subtle placeholder */}
+          {loading && (
+            <div className="h-14 w-64 rounded-xl bg-secondary/30 animate-pulse" />
+          )}
+
           {/* If NOT logged in: show Google login + Get Access */}
-          {!user && (
+          {!loading && !user && (
             <>
               <button
                 onClick={handleGoogleLogin}
@@ -121,7 +126,7 @@ export function Hero() {
           )}
 
           {/* If logged in but NOT paid: show Dashboard + Get Access */}
-          {user && !isPaid && (
+          {!loading && user && !isPaid && (
             <>
               <Link
                 href="/dashboard"
@@ -146,7 +151,7 @@ export function Hero() {
           )}
 
           {/* If logged in AND paid: only show Dashboard */}
-          {user && isPaid && (
+          {!loading && user && isPaid && (
             <Link
               href="/dashboard"
               className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105"

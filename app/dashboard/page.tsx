@@ -211,40 +211,51 @@ function DashboardContent() {
                 return (
                   <div 
                     key={subject.id} 
-                    className="relative p-5 rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden"
+                    className={`relative p-5 rounded-2xl border bg-card transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden
+                      ${isUnlocked ? 'border-border hover:border-primary/30 hover:shadow-md' : 'border-border/50 opacity-80'}`}
                   >
-                    {!isUnlocked && (
-                      <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                    {/* Subject name — always visible and clear */}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">{subject.subject}</h3>
+                        {!isUnlocked && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-amber-500/15 text-amber-500 rounded-full border border-amber-500/20">
+                            <Lock className="w-3 h-3" /> Locked
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Sem {subject.semester} • {subject.year}{subject.year === 1 ? 'st' : subject.year === 2 ? 'nd' : subject.year === 3 ? 'rd' : 'th'} Year</p>
+                    </div>
+
+                    {/* Buttons — visible but locked for non-paid */}
+                    <div className="flex gap-2 shrink-0">
+                      {isUnlocked ? (
+                        <>
+                          <button 
+                            onClick={() => handleAccess('video', subject.subject, subject.videoURL)}
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-sm font-medium"
+                          >
+                            <PlayCircle className="w-4 h-4" />
+                            Video
+                          </button>
+                          <button 
+                            onClick={() => handleAccess('notes', subject.subject, subject.notesURL)}
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-colors text-sm font-medium"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Notes
+                          </button>
+                        </>
+                      ) : (
                         <button 
                           onClick={startPayment}
                           disabled={isLoading}
-                          className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white font-bold rounded-full shadow-lg hover:bg-accent/90 transition-transform hover:scale-105 disabled:opacity-60 disabled:scale-100"
+                          className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-accent text-white font-semibold text-sm hover:bg-accent/90 transition-colors shadow-sm disabled:opacity-60"
                         >
                           <Lock className="w-4 h-4" />
                           {isLoading ? 'Processing...' : 'Unlock ₹29'}
                         </button>
-                      </div>
-                    )}
-
-                    <div className={!isUnlocked ? 'opacity-40 blur-[2px] pointer-events-none select-none' : ''}>
-                      <h3 className="font-semibold text-lg">{subject.subject}</h3>
-                      <p className="text-sm text-muted-foreground">Sem {subject.semester} • {subject.year}{subject.year === 1 ? 'st' : subject.year === 2 ? 'nd' : subject.year === 3 ? 'rd' : 'th'} Year</p>
-                    </div>
-                    <div className={`flex gap-2 shrink-0 ${!isUnlocked ? 'opacity-40 blur-[2px] pointer-events-none select-none' : ''}`}>
-                      <button 
-                        onClick={() => handleAccess('video', subject.subject, subject.videoURL)}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-sm font-medium"
-                      >
-                        <PlayCircle className="w-4 h-4" />
-                        Video
-                      </button>
-                      <button 
-                        onClick={() => handleAccess('notes', subject.subject, subject.notesURL)}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-colors text-sm font-medium"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Notes
-                      </button>
+                      )}
                     </div>
                   </div>
                 )
