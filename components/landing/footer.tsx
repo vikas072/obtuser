@@ -90,7 +90,7 @@ export function Footer() {
           className="text-center mt-8 pt-8 border-t border-border"
         >
           <p className="text-sm text-muted-foreground">
-            © 2024 Optusers. All rights reserved. Made with ❤️ for B.Tech
+            © {new Date().getFullYear()} Optusers. All rights reserved. Made with ❤️ for B.Tech
             Students
           </p>
         </motion.div>

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, Sparkles, Zap } from "lucide-react";
+import { Check, Sparkles, Zap, Clock } from "lucide-react";
 import { useRazorpay } from "@/src/hooks/useRazorpay";
 
 const features = [
@@ -17,6 +18,43 @@ const features = [
 
 export function Pricing() {
   const { startPayment, isLoading } = useRazorpay();
+  const [timeLeft, setTimeLeft] = useState({ hours: 24, minutes: 0, seconds: 0 });
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    
+    const calculateTimeLeft = () => {
+      let startTime = localStorage.getItem("offerStartTime");
+      if (!startTime) {
+        startTime = Date.now().toString();
+        localStorage.setItem("offerStartTime", startTime);
+      }
+      
+      let elapsed = Date.now() - parseInt(startTime, 10);
+      if (elapsed > TWENTY_FOUR_HOURS) {
+        // Reset if it hits 0
+        startTime = Date.now().toString();
+        localStorage.setItem("offerStartTime", startTime);
+        elapsed = 0;
+      }
+      
+      const remaining = TWENTY_FOUR_HOURS - elapsed;
+      
+      const h = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((remaining / 1000 / 60) % 60);
+      const s = Math.floor((remaining / 1000) % 60);
+      
+      setTimeLeft({ hours: h, minutes: m, seconds: s });
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (t: number) => t.toString().padStart(2, '0');
 
   return (
     <section className="relative py-24 px-4">
@@ -83,9 +121,23 @@ export function Pricing() {
                     ₹299
                   </span>
                 </div>
-                <p className="text-sm text-accent font-medium mb-6">
+                <p className="text-sm text-accent font-medium mb-2">
                   90% OFF - Limited Time Offer!
                 </p>
+                
+                {isMounted ? (
+                  <div className="flex items-center justify-center md:justify-start gap-2 mb-6">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-accent font-mono text-sm shadow-sm">
+                      <Clock className="w-4 h-4 animate-pulse" />
+                      <span>Offer ends in: </span>
+                      <span className="font-bold">{formatTime(timeLeft.hours)}</span>:
+                      <span className="font-bold">{formatTime(timeLeft.minutes)}</span>:
+                      <span className="font-bold">{formatTime(timeLeft.seconds)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[34px] mb-6" /> // Placeholder to prevent layout shift
+                )}
 
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -174,7 +226,7 @@ export function Pricing() {
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-sm">10,000+ Happy Students</span>
+            <span className="text-sm">500+ Students Enrolled</span>
           </div>
         </motion.div>
       </div>

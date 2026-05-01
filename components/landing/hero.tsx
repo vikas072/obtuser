@@ -50,7 +50,7 @@ export function Hero() {
         >
           <Sparkles className="w-4 h-4 text-accent" />
           <span className="text-sm text-accent font-medium">
-            Trusted by 10,000+ B.Tech Students
+            Trusted by 500+ B.Tech Students
           </span>
         </motion.div>
 
@@ -133,9 +133,9 @@ export function Hero() {
           className="flex flex-wrap items-center justify-center gap-8 mt-16"
         >
           {[
-            { value: "500+", label: "Video Lectures" },
-            { value: "1000+", label: "Notes PDFs" },
-            { value: "50+", label: "Subjects Covered" },
+            { value: "96+", label: "Subjects Covered" },
+            { value: "100%", label: "One-Time Payment" },
+            { value: "500+", label: "Students Enrolled" },
           ].map((stat, index) => (
             <div key={index} className="text-center">
               <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
