@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Users Collection
+    match /users/{userId} {
+      // Users can only read their own document
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can create their own document, but cannot set isPaid to true initially
+      allow create: if request.auth != null && request.auth.uid == userId 
+                    && (!request.resource.data.keys().hasAny(['isPaid']) || request.resource.data.isPaid == false);
+      
+      // Users can update their own document, but cannot modify the isPaid field
+      allow update: if request.auth != null && request.auth.uid == userId 
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPaid']));
+    }
+
+    // 2. Content Collection
+    match /content/{document=**} {
+      // Only authenticated users whose isPaid field is true can read content
+      allow read: if request.auth != null 
+                  && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPaid == true;
+      
+      // Nobody can write from the client (backend Admin SDK bypasses this)
+      allow write: if false;
+    }
+
+    // 3. Transactions Collection
+    match /transactions/{transactionId} {
+      // Users can only read transactions where the uid matches their own
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      
+      // Nobody can write from the client (backend Admin SDK bypasses this)
+      allow write: if false;
+    }
+    
+  }
+}
