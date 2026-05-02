@@ -25,12 +25,8 @@ export function Hero() {
     }
   };
 
-  // Auto-redirect if already logged in
-  useEffect(() => {
-    if (!loading && user) {
-      router.push("/dashboard");
-    }
-  }, [user, loading, router]);
+  // Removed auto-redirect to dashboard after login as per user request
+  // Users will now stay on landing page and only go to dashboard after selecting a year.
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-20">

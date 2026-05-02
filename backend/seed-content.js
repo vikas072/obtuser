@@ -35,8 +35,8 @@ const years = [1, 2, 3, 4]
 
 // Sample subjects per year
 const sampleSubjectsByYear = {
-  1: ['Physics', 'Chemistry', 'Mathematics-I', 'Basic Electrical Engineering'],
-  2: ['Data Structures', 'Digital Logic', 'Mathematics-II', 'Object Oriented Programming'],
+  1: ['Physics', 'Chemistry', 'Mathematics-I', 'Mathematics-II', 'Basic Electrical Engineering'],
+  2: ['Data Structures', 'Digital Logic', 'Mathematics-III', 'Mathematics-IV', 'Object Oriented Programming'],
   3: ['Operating Systems', 'Computer Networks', 'Database Management', 'Artificial Intelligence'],
   4: ['Cloud Computing', 'Machine Learning', 'Cyber Security', 'Major Project'],
 }

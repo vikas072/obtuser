@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { BookOpen, Code, Cpu, GraduationCap } from "lucide-react";
 
 const years = [
   {
+    id: 1,
     year: "1st Year",
     subjects: "Physics, Chemistry, Mathematics, Basic Engineering",
     icon: BookOpen,
@@ -12,6 +14,7 @@ const years = [
     shadow: "shadow-emerald-500/20",
   },
   {
+    id: 2,
     year: "2nd Year",
     subjects: "Data Structures, Digital Electronics, OOPs, Database",
     icon: Code,
@@ -19,6 +22,7 @@ const years = [
     shadow: "shadow-blue-500/20",
   },
   {
+    id: 3,
     year: "3rd Year",
     subjects: "Operating Systems, Computer Networks, AI/ML, Web Dev",
     icon: Cpu,
@@ -26,6 +30,7 @@ const years = [
     shadow: "shadow-violet-500/20",
   },
   {
+    id: 4,
     year: "4th Year",
     subjects: "Cloud Computing, Blockchain, Cyber Security, Projects",
     icon: GraduationCap,
@@ -56,6 +61,8 @@ const cardVariants = {
 };
 
 export function YearCards() {
+  const router = useRouter();
+
   return (
     <section className="relative py-24 px-4">
       <div className="max-w-6xl mx-auto">
@@ -93,6 +100,7 @@ export function YearCards() {
                 key={index}
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -5 }}
+                onClick={() => router.push(`/dashboard?year=${item.id}`)}
                 className={`group relative p-6 rounded-2xl bg-card backdrop-blur-xl border border-border cursor-pointer transition-all duration-300 hover:border-primary/50 hover:${item.shadow} hover:shadow-xl`}
               >
                 {/* Glow effect on hover */}
