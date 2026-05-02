@@ -9,16 +9,19 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isPaid, setIsPaid] = useState(false)
+  const [purchasedSemesters, setPurchasedSemesters] = useState([])
   const [loading, setLoading] = useState(true)
 
   const refreshUserData = async (uid) => {
     if (!uid) {
       setIsPaid(false)
+      setPurchasedSemesters([])
       return null
     }
 
     const data = await getUserData(uid)
     setIsPaid(Boolean(data?.isPaid))
+    setPurchasedSemesters(data?.purchasedSemesters || [])
     return data
   }
 
@@ -90,18 +93,20 @@ export function AuthProvider({ children }) {
     await signOut(auth)
     setUser(null)
     setIsPaid(false)
+    setPurchasedSemesters([])
   }
 
   const value = useMemo(
     () => ({
       user,
       isPaid,
+      purchasedSemesters,
       loading,
       login,
       logout,
       refreshUserData: safeRefreshUserData,
     }),
-    [user, isPaid, loading]
+    [user, isPaid, purchasedSemesters, loading]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

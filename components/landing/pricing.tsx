@@ -2,24 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, Sparkles, Zap, Clock } from "lucide-react";
-import { useRazorpay } from "@/src/hooks/useRazorpay";
+import { Check, Sparkles, BookOpen, LayoutDashboard, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/src/AuthContext";
 
 const features = [
-  "Access to all 4 years content",
-  "500+ Video Lectures",
-  "1000+ Notes PDFs",
-  "Offline Download Access",
+  "Comprehensive Video Lectures",
+  "Expert-Curated Study Notes",
+  "Full Semester Access",
+  "Branch-Specific Content",
   "Regular Content Updates",
-  "24/7 Support",
-  "Lifetime Access",
-  "No Hidden Fees",
+  "24/7 Student Support",
+  "One-Time Payment per Sem",
+  "No Hidden Subscriptions",
 ];
 
 export function Pricing() {
-  const { startPayment, isLoading } = useRazorpay();
+  const { user, loading, isPaid, purchasedSemesters } = useAuth() as any;
+  const router = useRouter();
   const [timeLeft, setTimeLeft] = useState({ hours: 24, minutes: 0, seconds: 0 });
   const [isMounted, setIsMounted] = useState(false);
+
+  // Hide pricing section if user has already purchased all semesters
+  if (loading || (user && (purchasedSemesters?.length || 0) >= 8)) return null;
 
   useEffect(() => {
     setIsMounted(true);
@@ -112,7 +118,7 @@ export function Pricing() {
             <div className="relative grid md:grid-cols-2 gap-8 items-center">
               {/* Left side - Price */}
               <div className="text-center md:text-left">
-                <p className="text-muted-foreground mb-2">One-time Payment</p>
+                <p className="text-muted-foreground mb-2">Per Semester Access</p>
                 <div className="flex items-baseline justify-center md:justify-start gap-2 mb-4">
                   <span className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                     ₹29
@@ -139,16 +145,45 @@ export function Pricing() {
                   <div className="h-[34px] mb-6" /> // Placeholder to prevent layout shift
                 )}
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={startPayment}
-                  disabled={isLoading}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <Zap className="w-5 h-5" />
-                  {isLoading ? "Processing..." : "Get Lifetime Access"}
-                </motion.button>
+                <div className="flex flex-col gap-4">
+                  {/* If not logged in: show Get Access */}
+                  {!loading && !user && (
+                    <button
+                      onClick={() => router.push("/dashboard")}
+                      className="group relative flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105"
+                    >
+                      <BookOpen className="w-5 h-5 text-primary-foreground" />
+                      <span className="font-semibold text-primary-foreground">
+                        Get Access ₹29
+                      </span>
+                      <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
+                    </button>
+                  )}
+
+                  {/* If logged in but NOT paid for everything: show Dashboard + Get Access */}
+                  {!loading && user && (!isPaid || (purchasedSemesters?.length || 0) < 8) && (
+                    <>
+                      <Link
+                        href="/dashboard"
+                        className="group flex items-center justify-center gap-3 px-8 py-4 bg-secondary/80 hover:bg-secondary border border-border rounded-xl backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-foreground">Go to Dashboard</span>
+                      </Link>
+
+                      <button
+                        onClick={() => router.push("/dashboard")}
+                        className="group relative flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105"
+                      >
+                        <BookOpen className="w-5 h-5 text-primary-foreground" />
+                        <span className="font-semibold text-primary-foreground">
+                          Unlock Semester ₹29
+                        </span>
+                        <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
+                      </button>
+                    </>
+                  )}
+                </div>
 
                 <p className="text-xs text-muted-foreground mt-4">
                   Secure payment via Razorpay

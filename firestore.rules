@@ -7,13 +7,13 @@ service cloud.firestore {
       // Users can only read their own document
       allow read, delete: if request.auth != null && request.auth.uid == userId;
       
-      // Users can create their own document, but cannot set isPaid to true initially
+      // Users can create their own document, but cannot set isPaid or purchasedSemesters initially
       allow create: if request.auth != null && request.auth.uid == userId 
-                    && (!request.resource.data.keys().hasAny(['isPaid']) || request.resource.data.isPaid == false);
+                    && (!request.resource.data.keys().hasAny(['isPaid', 'purchasedSemesters']));
       
-      // Users can update their own document, but cannot modify the isPaid field
+      // Users can update their own document, but cannot modify isPaid or purchasedSemesters
       allow update: if request.auth != null && request.auth.uid == userId 
-                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPaid']));
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPaid', 'purchasedSemesters']));
     }
 
     // 2. Content Collection

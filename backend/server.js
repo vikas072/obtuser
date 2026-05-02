@@ -48,10 +48,10 @@ const firestore = admin.apps.length ? admin.firestore() : null
 
 app.post('/api/payment/create-order', async (req, res) => {
   try {
-    const { uid } = req.body || {}
+    const { uid, semesterId } = req.body || {}
 
-    if (!uid) {
-      return res.status(400).json({ error: 'uid is required' })
+    if (!uid || !semesterId) {
+      return res.status(400).json({ error: 'uid and semesterId are required' })
     }
 
     if (!process.env.RAZORPAY_SECRET) {
@@ -63,9 +63,10 @@ app.post('/api/payment/create-order', async (req, res) => {
     const order = await razorpay.orders.create({
       amount: PAYMENT_AMOUNT_PAISE,
       currency: 'INR',
-      receipt: `optusers_${uid}_${Date.now()}`,
+      receipt: `optusers_${uid}_${semesterId}_${Date.now()}`,
       notes: {
         uid,
+        semesterId,
       },
     })
 
@@ -82,10 +83,10 @@ app.post('/api/payment/create-order', async (req, res) => {
 
 app.post('/api/payment/verify', async (req, res) => {
   try {
-    const { uid, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+    const { uid, semesterId, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body || {}
 
-    if (!uid || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (!uid || !semesterId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ error: 'Missing payment verification fields' })
     }
 
@@ -110,13 +111,17 @@ app.post('/api/payment/verify', async (req, res) => {
         .json({ verified: false, error: 'Firebase Admin is not configured' })
     }
 
+    // Update user data: mark as paid and add the semester to purchasedSemesters array
     await firestore.collection('users').doc(uid).set(
       {
         isPaid: true,
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
-        payment: {
-          razorpayOrderId: razorpay_order_id,
+        purchasedSemesters: admin.firestore.FieldValue.arrayUnion(semesterId),
+        lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+        [`payments.${razorpay_order_id}`]: {
           razorpayPaymentId: razorpay_payment_id,
+          semesterId: semesterId,
+          amount: PAYMENT_AMOUNT_PAISE / 100,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
         },
       },
       { merge: true }

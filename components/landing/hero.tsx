@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Sparkles, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { useRazorpay } from "@/src/hooks/useRazorpay";
 
 export function Hero() {
   const router = useRouter();
-  const { user, isPaid, loading, login } = useAuth() as any;
+  const { user, isPaid, purchasedSemesters, loading, login } = useAuth() as any;
   const { startPayment, isLoading } = useRazorpay();
 
   const handleGoogleLogin = async () => {
@@ -23,6 +24,13 @@ export function Hero() {
       toast.error(message);
     }
   };
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/dashboard");
+    }
+  }, [user, loading, router]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-20">
@@ -112,21 +120,20 @@ export function Hero() {
               </button>
 
               <button
-                onClick={startPayment}
-                disabled={isLoading}
-                className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105 disabled:opacity-60"
+                onClick={() => router.push("/dashboard")}
+                className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105"
               >
                 <BookOpen className="w-5 h-5 text-primary-foreground" />
                 <span className="font-semibold text-primary-foreground">
-                  {isLoading ? 'Processing...' : 'Get Access ₹29'}
+                  Get Access ₹29
                 </span>
-                <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">ONE-TIME</span>
+                <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
               </button>
             </>
           )}
 
-          {/* If logged in but NOT paid: show Dashboard + Get Access */}
-          {!loading && user && !isPaid && (
+          {/* If logged in but NOT paid for everything: show Dashboard + Get Access */}
+          {!loading && user && (!isPaid || (purchasedSemesters?.length || 0) < 8) && (
             <>
               <Link
                 href="/dashboard"
@@ -137,15 +144,14 @@ export function Hero() {
               </Link>
 
               <button
-                onClick={startPayment}
-                disabled={isLoading}
-                className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105 disabled:opacity-60"
+                onClick={() => router.push("/dashboard")}
+                className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-105"
               >
                 <BookOpen className="w-5 h-5 text-primary-foreground" />
                 <span className="font-semibold text-primary-foreground">
-                  {isLoading ? 'Processing...' : 'Unlock Full Access ₹29'}
+                  Unlock Semester ₹29
                 </span>
-                <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">ONE-TIME</span>
+                <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
               </button>
             </>
           )}
@@ -170,8 +176,8 @@ export function Hero() {
           className="flex flex-wrap items-center justify-center gap-8 mt-16"
         >
           {[
-            { value: "96+", label: "Subjects Covered" },
-            { value: "100%", label: "One-Time Payment" },
+            { value: "40+", label: "Subjects Covered" },
+            { value: "₹29", label: "Per Semester" },
             { value: "500+", label: "Students Enrolled" },
           ].map((stat, index) => (
             <div key={index} className="text-center">

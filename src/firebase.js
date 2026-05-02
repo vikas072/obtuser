@@ -83,21 +83,4 @@ export const getUserData = async (uid) => {
   return userSnapshot.exists() ? userSnapshot.data() : null
 }
 
-export const markUserPaid = async (uid) => {
-  if (!uid) {
-    throw new Error('uid is required to mark a user as paid')
-  }
-  ensureFirebaseConfigured()
-
-  const userRef = doc(db, 'users', uid)
-  await setDoc(
-    userRef,
-    {
-      isPaid: true,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  )
-}
-
 export { app, auth, db, storage, hasFirebaseConfig }

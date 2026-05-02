@@ -30,9 +30,14 @@ export function useRazorpay() {
   const [isLoading, setIsLoading] = useState(false)
   const { user, refreshUserData } = useAuth()
 
-  const startPayment = useCallback(async () => {
+  const startPayment = useCallback(async (semesterId) => {
     if (!user?.uid) {
       toast.error('Please login before making a payment.')
+      return
+    }
+
+    if (!semesterId) {
+      toast.error('Semester selection is required.')
       return
     }
 
@@ -52,7 +57,7 @@ export function useRazorpay() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid }),
+        body: JSON.stringify({ uid: user.uid, semesterId }),
       })
 
       if (!orderResponse.ok) {
@@ -66,7 +71,7 @@ export function useRazorpay() {
         amount: PAYMENT_AMOUNT_PAISE,
         currency: 'INR',
         name: 'Optusers',
-        description: 'Lifetime Access - One Time Payment',
+        description: `Unlock Semester ${semesterId.replace('sem', '')} Access`,
         order_id: orderData.orderId,
         prefill: {
           name: user.displayName || '',
@@ -84,6 +89,7 @@ export function useRazorpay() {
               },
               body: JSON.stringify({
                 uid: user.uid,
+                semesterId,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
@@ -100,9 +106,8 @@ export function useRazorpay() {
               throw new Error('Payment could not be verified.')
             }
 
-            await markUserPaid(user.uid)
             await refreshUserData(user.uid)
-            toast.success('Payment successful! Lifetime access unlocked.')
+            toast.success(`Semester ${semesterId.replace('sem', '')} unlocked successfully!`)
           } catch (error) {
             const message =
               error instanceof Error
