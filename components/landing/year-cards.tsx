@@ -1,25 +1,29 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Code, Cpu, GraduationCap } from "lucide-react";
+import { BookOpen, Code, Cpu, GraduationCap, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const years = [
   {
     id: 1,
     year: "1st Year",
-    subjects: "Physics, Chemistry, Mathematics, Basic Engineering",
+    subjects: "Physics, Chemistry, Maths-I & II, Basic Engineering",
     icon: BookOpen,
     color: "from-emerald-500 to-teal-500",
     shadow: "shadow-emerald-500/20",
+    semesters: [1, 2],
   },
   {
     id: 2,
     year: "2nd Year",
-    subjects: "Data Structures, Digital Electronics, OOPs, Database",
+    subjects: "Data Structures, Python, Maths-III & IV, Soft Skills",
     icon: Code,
     color: "from-blue-500 to-cyan-500",
     shadow: "shadow-blue-500/20",
+    semesters: [3, 4],
   },
   {
     id: 3,
@@ -28,6 +32,7 @@ const years = [
     icon: Cpu,
     color: "from-violet-500 to-purple-500",
     shadow: "shadow-violet-500/20",
+    semesters: [5, 6],
   },
   {
     id: 4,
@@ -36,6 +41,7 @@ const years = [
     icon: GraduationCap,
     color: "from-orange-500 to-amber-500",
     shadow: "shadow-orange-500/20",
+    semesters: [7, 8],
   },
 ];
 
@@ -62,6 +68,18 @@ const cardVariants = {
 
 export function YearCards() {
   const router = useRouter();
+  const [selectedYearData, setSelectedYearData] = useState<any>(null);
+
+  const handleYearClick = (item: any) => {
+    setSelectedYearData(item);
+  };
+
+  const handleSemesterSelect = (sem: number) => {
+    if (selectedYearData) {
+      router.push(`/dashboard?year=${selectedYearData.id}&semester=${sem}`);
+      setSelectedYearData(null);
+    }
+  };
 
   return (
     <section className="relative py-24 px-4">
@@ -81,7 +99,7 @@ export function YearCards() {
             </span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Select your current year to access all the study materials you need
+            Select your current year and semester to access all the study materials you need
           </p>
         </motion.div>
 
@@ -100,7 +118,7 @@ export function YearCards() {
                 key={index}
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -5 }}
-                onClick={() => router.push(`/dashboard?year=${item.id}`)}
+                onClick={() => handleYearClick(item)}
                 className={`group relative p-6 rounded-2xl bg-card backdrop-blur-xl border border-border cursor-pointer transition-all duration-300 hover:border-primary/50 hover:${item.shadow} hover:shadow-xl`}
               >
                 {/* Glow effect on hover */}
@@ -125,26 +143,44 @@ export function YearCards() {
 
                 {/* Arrow indicator */}
                 <div className="relative flex items-center gap-2 mt-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-sm font-medium">Explore</span>
-                  <svg
-                    className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
-                  </svg>
+                  <span className="text-sm font-medium">Select Semester</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </motion.div>
             );
           })}
         </motion.div>
       </div>
+
+      {/* Semester Selection Modal */}
+      <Dialog open={!!selectedYearData} onOpenChange={(open) => !open && setSelectedYearData(null)}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">
+              Select Semester
+            </DialogTitle>
+            <DialogDescription className="text-center text-muted-foreground">
+              Choose your current semester for {selectedYearData?.year}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            {selectedYearData?.semesters.map((sem: number) => (
+              <button
+                key={sem}
+                onClick={() => handleSemesterSelect(sem)}
+                className="group relative p-6 rounded-2xl border border-border bg-secondary/30 hover:bg-primary hover:border-primary transition-all duration-300 text-center"
+              >
+                <span className="block text-3xl font-bold mb-1 group-hover:text-white transition-colors">
+                  Sem {sem}
+                </span>
+                <span className="text-xs text-muted-foreground group-hover:text-white/80 transition-colors uppercase tracking-widest font-semibold">
+                  Access Now
+                </span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

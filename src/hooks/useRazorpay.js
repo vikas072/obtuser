@@ -30,7 +30,7 @@ export function useRazorpay() {
   const [isLoading, setIsLoading] = useState(false)
   const { user, refreshUserData } = useAuth()
 
-  const startPayment = useCallback(async (semesterId) => {
+  const startPayment = useCallback(async (semesterId, subjectIds = []) => {
     if (!user?.uid) {
       toast.error('Please login before making a payment.')
       return
@@ -57,7 +57,7 @@ export function useRazorpay() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid, semesterId }),
+        body: JSON.stringify({ uid: user.uid, semesterId, subjectIds }),
       })
 
       if (!orderResponse.ok) {
@@ -71,7 +71,7 @@ export function useRazorpay() {
         amount: PAYMENT_AMOUNT_PAISE,
         currency: 'INR',
         name: 'Optusers',
-        description: `Unlock Semester ${semesterId.replace('sem', '')} Access`,
+        description: `Unlock ${subjectIds.length} Subjects for Semester ${semesterId.replace('sem', '')}`,
         order_id: orderData.orderId,
         prefill: {
           name: user.displayName || '',
@@ -90,6 +90,7 @@ export function useRazorpay() {
               body: JSON.stringify({
                 uid: user.uid,
                 semesterId,
+                subjectIds,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
@@ -107,7 +108,7 @@ export function useRazorpay() {
             }
 
             await refreshUserData(user.uid)
-            toast.success(`Semester ${semesterId.replace('sem', '')} unlocked successfully!`)
+            toast.success(`Selected subjects unlocked successfully!`)
           } catch (error) {
             const message =
               error instanceof Error

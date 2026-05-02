@@ -33,12 +33,12 @@ const firestore = admin.firestore()
 const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
 const years = [1, 2, 3, 4]
 
-// Sample subjects per year
+// Sample subjects per year - expanded to ensure selection rules (5 or 6 subjects) work
 const sampleSubjectsByYear = {
-  1: ['Physics', 'Chemistry', 'Mathematics-I', 'Mathematics-II', 'Basic Electrical Engineering'],
-  2: ['Data Structures', 'Digital Logic', 'Mathematics-III', 'Mathematics-IV', 'Object Oriented Programming'],
-  3: ['Operating Systems', 'Computer Networks', 'Database Management', 'Artificial Intelligence'],
-  4: ['Cloud Computing', 'Machine Learning', 'Cyber Security', 'Major Project'],
+  1: ['Physics', 'Chemistry', 'Mathematics-I', 'Mathematics-II', 'Basic Electrical Engineering', 'Environmental Science', 'Engineering Graphics', 'Communication Skills'],
+  2: ['Data Structures', 'Digital Logic', 'Mathematics-III', 'Mathematics-IV', 'Object Oriented Programming', 'Human Value', 'Technical Communication', 'Python Programming', 'Computer Architecture', 'Discrete Structures'],
+  3: ['Operating Systems', 'Computer Networks', 'Database Management', 'Artificial Intelligence', 'Software Engineering', 'Compiler Design', 'Web Development', 'Mobile Computing'],
+  4: ['Cloud Computing', 'Machine Learning', 'Cyber Security', 'Major Project', 'Data Science', 'Internet of Things'],
 }
 
 async function seedContent() {
@@ -49,13 +49,13 @@ async function seedContent() {
 
   for (const year of years) {
     for (const branch of branches) {
-      // Get the standard subjects for this year, then append the branch name to make it look specialized
-      const subjects = sampleSubjectsByYear[year]
+      const yearSubjects = sampleSubjectsByYear[year]
 
-      // For semester, we assume Year 1 = Sem 1 & 2, etc. We'll assign a mock semester.
-      const semester = year * 2 - 1
-
-      for (const subjectName of subjects) {
+      for (let i = 0; i < yearSubjects.length; i++) {
+        const subjectName = yearSubjects[i]
+        // Assign roughly half to first sem of the year, half to second sem
+        const semester = i % 2 === 0 ? (year * 2 - 1) : (year * 2)
+        
         // Create a unique document ID or let Firestore generate it
         const newDocRef = contentRef.doc()
 

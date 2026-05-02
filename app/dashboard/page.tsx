@@ -13,14 +13,19 @@ import { useSearchParams } from 'next/navigation'
 
 function DashboardContent() {
   const searchParams = useSearchParams()
-  const { user, isPaid, purchasedSemesters, loading, logout } = useAuth() as any
+  const { user, isPaid, purchasedSemesters, unlockedSubjects, loading, logout } = useAuth() as any
   const { startPayment, isLoading } = useRazorpay()
+
+  const [selectionModal, setSelectionModal] = useState<{ open: boolean; semester: number; subjects: any[] }>({ open: false, semester: 0, subjects: [] })
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
 
   const initialYear = Number(searchParams.get('year')) || 1
   const initialBranch = searchParams.get('branch') || 'CSE'
+  const initialSemester = Number(searchParams.get('semester')) || null
 
   const [selectedYear, setSelectedYear] = useState<number>(initialYear)
   const [selectedBranch, setSelectedBranch] = useState<string>(initialBranch)
+  const [selectedSemester, setSelectedSemester] = useState<number | null>(initialSemester)
   const [subjects, setSubjects] = useState<any[]>([])
   const [isFetching, setIsFetching] = useState(true)
 
@@ -28,6 +33,7 @@ function DashboardContent() {
 
   const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
   const years = [1, 2, 3, 4]
+  const semestersForYear = selectedYear ? [selectedYear * 2 - 1, selectedYear * 2] : []
 
   useEffect(() => {
     if (!user) return;
@@ -35,11 +41,16 @@ function DashboardContent() {
     const fetchSubjects = async () => {
       setIsFetching(true);
       try {
-        const q = query(
+        let q = query(
           collection(db as any, 'content'),
           where('year', '==', selectedYear),
           where('branch', '==', selectedBranch)
         );
+
+        if (selectedSemester) {
+          q = query(q, where('semester', '==', selectedSemester));
+        }
+
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
         
@@ -56,7 +67,50 @@ function DashboardContent() {
     };
 
     fetchSubjects();
-  }, [selectedYear, selectedBranch, user]);
+  }, [selectedYear, selectedBranch, selectedSemester, user]);
+
+  const getRequiredCount = (year: number) => {
+    if (year === 1) return 5;
+    if (year === 2) return 6;
+    if (year === 3) return 5;
+    return 5; // Default for 4th year or others
+  };
+
+  const handleUnlockClick = (semester: number) => {
+    const semSubjects = subjects.filter(s => s.semester === semester);
+    setSelectionModal({
+      open: true,
+      semester,
+      subjects: semSubjects
+    });
+    setSelectedSubjectIds([]);
+  };
+
+  const toggleSubjectSelection = (id: string) => {
+    setSelectedSubjectIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(sid => sid !== id);
+      }
+      const limit = getRequiredCount(selectedYear);
+      if (prev.length >= limit) {
+        toast.error(`You can only select exactly ${limit} subjects for Year ${selectedYear}.`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const handleConfirmUnlock = async () => {
+    const limit = getRequiredCount(selectedYear);
+    if (selectedSubjectIds.length !== limit) {
+      toast.error(`Please select exactly ${limit} subjects.`);
+      return;
+    }
+
+    const semId = `sem${selectionModal.semester}`;
+    await startPayment(semId, selectedSubjectIds);
+    setSelectionModal(prev => ({ ...prev, open: false }));
+  };
 
   if (loading) {
     return (
@@ -85,15 +139,16 @@ function DashboardContent() {
     )
   }
 
-  const handleAccess = (type: 'video' | 'notes', subjectName: string, semester: number, url: string) => {
+  const handleAccess = (type: 'video' | 'notes', subject: any, semester: number, url: string) => {
+    // A subject is unlocked if its ID is in unlockedSubjects OR if the whole semester is purchased (for backward compatibility)
     const semId = `sem${semester}`;
-    const hasAccess = purchasedSemesters?.includes(semId);
+    const hasAccess = unlockedSubjects?.includes(subject.id) || purchasedSemesters?.includes(semId);
 
     if (!hasAccess) {
       toast.error(
         <div className="flex flex-col gap-1">
-          <span className="font-semibold text-base">Semester Locked</span>
-          <span className="text-sm">Please unlock Semester {semester} to view {type} for {subjectName}.</span>
+          <span className="font-semibold text-base">Subject Locked</span>
+          <span className="text-sm">Please unlock "{subject.subject}" to view its {type}.</span>
         </div>
       )
       return
@@ -166,15 +221,18 @@ function DashboardContent() {
           </div>
           
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-card border border-border shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-card border border-border shadow-sm">
             <div className="flex-1 space-y-1">
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Filter className="w-4 h-4" />
-                Select Year
+                Year
               </label>
               <select 
                 value={selectedYear} 
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                onChange={(e) => {
+                  setSelectedYear(Number(e.target.value))
+                  setSelectedSemester(null) // Reset semester when year changes
+                }}
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {years.map(y => (
@@ -185,7 +243,7 @@ function DashboardContent() {
             <div className="flex-1 space-y-1">
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
-                Select Branch
+                Branch
               </label>
               <select 
                 value={selectedBranch} 
@@ -197,12 +255,33 @@ function DashboardContent() {
                 ))}
               </select>
             </div>
+            <div className="flex-1 space-y-1">
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                Semester
+              </label>
+              <select 
+                value={selectedSemester || ''} 
+                onChange={(e) => setSelectedSemester(e.target.value ? Number(e.target.value) : null)}
+                className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary font-semibold text-primary"
+              >
+                <option value="">All Semesters</option>
+                {semestersForYear.map(s => (
+                  <option key={s} value={s}>Semester {s}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Top CTA for Locked Semesters */}
           {!isFetching && subjects.length > 0 && (() => {
             const displayedSems = Array.from(new Set(subjects.map(s => s.semester))).sort((a, b) => a - b);
-            const lockedSems = displayedSems.filter(sem => !(purchasedSemesters || []).includes(`sem${sem}`));
+            
+            // A semester is considered "locked" if there are any subjects in it that the user hasn't unlocked yet
+            const lockedSems = displayedSems.filter(sem => {
+              const semSubjects = subjects.filter(s => s.semester === sem);
+              return semSubjects.some(s => !unlockedSubjects?.includes(s.id));
+            });
 
             if (lockedSems.length === 0) return null;
 
@@ -213,9 +292,9 @@ function DashboardContent() {
                     <Lock className="w-6 h-6 text-amber-500" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="font-bold text-lg text-amber-500">Unlock All Materials</h3>
+                    <h3 className="font-bold text-lg text-amber-500">Unlock Subjects</h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      Get full access to videos and notes for {lockedSems.map(s => `Semester ${s}`).join(' & ')}
+                      Select and unlock your preferred subjects for ₹29 per set.
                     </p>
                   </div>
                 </div>
@@ -223,7 +302,7 @@ function DashboardContent() {
                   {lockedSems.map(sem => (
                     <button 
                       key={sem}
-                      onClick={() => startPayment(`sem${sem}`)}
+                      onClick={() => handleUnlockClick(sem)}
                       disabled={isLoading}
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60 scale-100 hover:scale-105 active:scale-95"
                     >
@@ -259,7 +338,10 @@ function DashboardContent() {
                 // Ensure semester is treated as a number and semId is correctly formatted
                 const semNumber = Number(subject.semester);
                 const semId = semNumber ? `sem${semNumber}` : 'locked';
-                const isUnlocked = semId !== 'locked' && (purchasedSemesters || []).includes(semId);
+                
+                // Subject is unlocked if its specific ID is in unlockedSubjects
+                // Or if the whole semester was purchased previously (backward compatibility)
+                const isUnlocked = unlockedSubjects?.includes(subject.id) || (semId !== 'locked' && (purchasedSemesters || []).includes(semId));
 
                 return (
                   <div 
@@ -288,14 +370,14 @@ function DashboardContent() {
                       {isUnlocked ? (
                         <>
                           <button 
-                            onClick={() => handleAccess('video', subject.subject, subject.semester, subject.videoURL)}
+                            onClick={() => handleAccess('video', subject, subject.semester, subject.videoURL)}
                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-sm font-medium"
                           >
                             <PlayCircle className="w-4 h-4" />
                             Video
                           </button>
                           <button 
-                            onClick={() => handleAccess('notes', subject.subject, subject.semester, subject.notesURL)}
+                            onClick={() => handleAccess('notes', subject, subject.semester, subject.notesURL)}
                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-all text-sm font-medium"
                           >
                             <FileText className="w-4 h-4" />
@@ -304,7 +386,7 @@ function DashboardContent() {
                         </>
                       ) : (
                         <button 
-                          onClick={() => startPayment(semId)}
+                          onClick={() => handleUnlockClick(subject.semester)}
                           disabled={isLoading}
                           className="group/lock flex-1 sm:flex-none inline-flex items-center justify-center gap-3 px-6 py-2.5 rounded-xl bg-secondary/80 border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm"
                         >
@@ -327,6 +409,77 @@ function DashboardContent() {
         </div>
         
       </div>
+
+      {/* Subject Selection Modal */}
+      <Dialog 
+        open={selectionModal.open} 
+        onOpenChange={(open) => !open && setSelectionModal(prev => ({ ...prev, open: false }))}
+      >
+        <DialogContent className="max-w-2xl bg-card border-border shadow-2xl overflow-hidden">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-bold">Select Subjects to Unlock</DialogTitle>
+            <DialogDescription className="text-base">
+              Year {selectedYear} students must select **exactly {getRequiredCount(selectedYear)} subjects** to unlock for ₹29.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto p-1">
+            {selectionModal.subjects.map(subject => {
+              const isSelected = selectedSubjectIds.includes(subject.id);
+              const isAlreadyUnlocked = unlockedSubjects?.includes(subject.id);
+
+              return (
+                <button
+                  key={subject.id}
+                  disabled={isAlreadyUnlocked}
+                  onClick={() => toggleSubjectSelection(subject.id)}
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left
+                    ${isAlreadyUnlocked 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 cursor-not-allowed opacity-60' 
+                      : isSelected 
+                        ? 'bg-primary/10 border-primary shadow-sm ring-1 ring-primary/20' 
+                        : 'bg-secondary/20 border-border hover:border-primary/50'}`}
+                >
+                  <div className="min-w-0">
+                    <p className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                      {subject.subject}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isAlreadyUnlocked ? 'Already Unlocked' : 'Select Subject'}
+                    </p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                    ${isAlreadyUnlocked 
+                      ? 'bg-emerald-500 border-emerald-500 text-white' 
+                      : isSelected 
+                        ? 'bg-primary border-primary text-white' 
+                        : 'border-border'}`}
+                  >
+                    {(isSelected || isAlreadyUnlocked) && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-border">
+            <div className="text-center sm:text-left">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
+              <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
+              </p>
+            </div>
+            
+            <button
+              disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
+              onClick={() => handleConfirmUnlock()}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
+            >
+              {isLoading ? 'Processing...' : `Unlock Selected for ₹29`}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Media Viewer Modal */}
       <Dialog open={!!activeMedia.type} onOpenChange={(open) => !open && setActiveMedia({ type: null, url: '', title: '' })}>

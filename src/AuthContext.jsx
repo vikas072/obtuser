@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isPaid, setIsPaid] = useState(false)
   const [purchasedSemesters, setPurchasedSemesters] = useState([])
+  const [unlockedSubjects, setUnlockedSubjects] = useState([])
   const [loading, setLoading] = useState(true)
 
   const refreshUserData = async (uid) => {
@@ -22,6 +23,7 @@ export function AuthProvider({ children }) {
     const data = await getUserData(uid)
     setIsPaid(Boolean(data?.isPaid))
     setPurchasedSemesters(data?.purchasedSemesters || [])
+    setUnlockedSubjects(data?.unlockedSubjects || [])
     return data
   }
 
@@ -101,12 +103,13 @@ export function AuthProvider({ children }) {
       user,
       isPaid,
       purchasedSemesters,
+      unlockedSubjects,
       loading,
       login,
       logout,
       refreshUserData: safeRefreshUserData,
     }),
-    [user, isPaid, purchasedSemesters, loading]
+    [user, isPaid, purchasedSemesters, unlockedSubjects, loading]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
