@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/src/AuthContext'
 import { toast } from 'sonner'
-import { PlayCircle, FileText, LogOut, Home, Lock, Filter, BookOpen, GraduationCap } from 'lucide-react'
+import { PlayCircle, FileText, LogOut, Home, Lock, Filter, BookOpen, GraduationCap, Sparkles, Zap, CreditCard } from 'lucide-react'
 import { useRazorpay } from '@/src/hooks/useRazorpay'
 import { db } from '@/src/firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
@@ -18,6 +18,8 @@ function DashboardContent() {
 
   const [selectionModal, setSelectionModal] = useState<{ open: boolean; semester: number; subjects: any[] }>({ open: false, semester: 0, subjects: [] })
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
+  const [couponCode, setCouponCode] = useState('')
+  const [isCouponValid, setIsCouponValid] = useState(false)
 
   const initialYear = Number(searchParams.get('year')) || 1
   const initialBranch = searchParams.get('branch') || 'CSE'
@@ -100,7 +102,7 @@ function DashboardContent() {
     });
   };
 
-  const handleConfirmUnlock = async () => {
+  const handleConfirmUnlock = async (method: 'upi' | 'card' = 'card') => {
     const limit = getRequiredCount(selectedYear);
     if (selectedSubjectIds.length !== limit) {
       toast.error(`Please select exactly ${limit} subjects.`);
@@ -108,8 +110,9 @@ function DashboardContent() {
     }
 
     const semId = `sem${selectionModal.semester}`;
-    await startPayment(semId, selectedSubjectIds);
+    await startPayment(semId, selectedSubjectIds, couponCode, (method === 'upi' ? 'upi' : null) as any);
     setSelectionModal(prev => ({ ...prev, open: false }));
+    setCouponCode('');
   };
 
   if (loading) {
@@ -159,7 +162,7 @@ function DashboardContent() {
       return;
     }
     
-    setActiveMedia({ type, url, title: subjectName });
+    setActiveMedia({ type, url, title: subject.subject });
   }
 
   return (
@@ -294,7 +297,7 @@ function DashboardContent() {
                   <div className="space-y-1">
                     <h3 className="font-bold text-lg text-amber-500">Unlock Subjects</h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      Select and unlock your preferred subjects for ₹29 per set.
+                      Select and unlock your preferred subjects per set.
                     </p>
                   </div>
                 </div>
@@ -306,7 +309,7 @@ function DashboardContent() {
                       disabled={isLoading}
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60 scale-100 hover:scale-105 active:scale-95"
                     >
-                      Unlock Sem {sem} ₹29
+                      Unlock Sem {sem}
                     </button>
                   ))}
                 </div>
@@ -396,7 +399,7 @@ function DashboardContent() {
                           </div>
                           <div className="flex flex-col items-start leading-tight">
                             <span className="text-sm font-bold">Locked</span>
-                            <span className="text-[10px] opacity-70">Unlock for ₹29</span>
+                            <span className="text-[10px] opacity-70">Unlock Subjects</span>
                           </div>
                         </button>
                       )}
@@ -462,22 +465,74 @@ function DashboardContent() {
             })}
           </div>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-border">
-            <div className="text-center sm:text-left">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
-              <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
-                {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
-              </p>
+            <div className="flex-1 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Coupon Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon (e.g. SAVE90)"
+                    value={couponCode}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setCouponCode(val);
+                      setIsCouponValid(['SAVE90', 'OFF90', 'EXAM90'].includes(val));
+                    }}
+                    className="flex-1 h-11 px-4 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all uppercase font-mono"
+                  />
+                  {isCouponValid && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 text-sm font-bold">
+                      <Sparkles className="w-4 h-4" />
+                      Applied
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-border/50">
+                <div className="text-center sm:text-left">
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
+                  <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <div className="flex flex-col gap-3 w-full">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
+                      <Zap className="w-3 h-3 text-emerald-500" />
+                      Supported: GPay, PhonePe, Paytm, & more
+                    </div>
+                    <button
+                      disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
+                      onClick={() => handleConfirmUnlock('upi')}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-emerald-600/20"
+                    >
+                      {isLoading ? 'Processing...' : (
+                        <>
+                          <Zap className="w-5 h-5 fill-current" />
+                          Pay via UPI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-3 w-full pt-[21px]">
+                    <button
+                      disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
+                      onClick={() => handleConfirmUnlock('card')}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
+                    >
+                      {isLoading ? 'Processing...' : (
+                        <>
+                          <CreditCard className="w-5 h-5" />
+                          Other Methods
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <button
-              disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
-              onClick={() => handleConfirmUnlock()}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
-            >
-              {isLoading ? 'Processing...' : `Unlock Selected for ₹29`}
-            </button>
-          </div>
         </DialogContent>
       </Dialog>
 

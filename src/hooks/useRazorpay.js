@@ -30,7 +30,13 @@ export function useRazorpay() {
   const [isLoading, setIsLoading] = useState(false)
   const { user, refreshUserData } = useAuth()
 
-  const startPayment = useCallback(async (semesterId, subjectIds = []) => {
+  /**
+   * @param {string} semesterId
+   * @param {string[]} subjectIds
+   * @param {string} couponCode
+   * @param {'upi' | null} preferredMethod
+   */
+  const startPayment = useCallback(async (semesterId, subjectIds = [], couponCode = '', preferredMethod = null) => {
     if (!user?.uid) {
       toast.error('Please login before making a payment.')
       return
@@ -50,14 +56,14 @@ export function useRazorpay() {
         throw new Error('Unable to load Razorpay checkout. Please retry.')
       }
 
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ''
+      const apiBaseUrl = '' // Use relative paths for Next.js API routes
 
-      const orderResponse = await fetch(`${apiBaseUrl}/api/payment/create-order`, {
+      const orderResponse = await fetch(`${apiBaseUrl}/api/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid, semesterId, subjectIds }),
+        body: JSON.stringify({ uid: user.uid, semesterId, subjectIds, couponCode }),
       })
 
       if (!orderResponse.ok) {
@@ -66,9 +72,15 @@ export function useRazorpay() {
 
       const orderData = await orderResponse.json()
 
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      
+      if (!razorpayKey) {
+        throw new Error('Razorpay Key ID is missing. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID in your .env file.');
+      }
+
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_Sk3cwe4bRMi6Qp',
-        amount: PAYMENT_AMOUNT_PAISE,
+        key: razorpayKey,
+        amount: orderData.amount, // Use the amount from server
         currency: 'INR',
         name: 'Optusers',
         description: `Unlock ${subjectIds.length} Subjects for Semester ${semesterId.replace('sem', '')}`,
@@ -80,9 +92,27 @@ export function useRazorpay() {
         theme: {
           color: '#6366f1',
         },
+        config: preferredMethod === 'upi' ? {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay via UPI',
+                instruments: [
+                  {
+                    method: 'upi',
+                  },
+                ],
+              },
+            },
+            sequence: ['block.upi'],
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
+        } : undefined,
         handler: async (response) => {
           try {
-            const verifyResponse = await fetch(`${apiBaseUrl}/api/payment/verify`, {
+            const verifyResponse = await fetch(`${apiBaseUrl}/api/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

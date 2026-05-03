@@ -121,7 +121,7 @@ export function Hero() {
               >
                 <BookOpen className="w-5 h-5 text-primary-foreground" />
                 <span className="font-semibold text-primary-foreground">
-                  Get Access ₹29
+                  Get Access
                 </span>
                 <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
               </button>
@@ -145,7 +145,7 @@ export function Hero() {
               >
                 <BookOpen className="w-5 h-5 text-primary-foreground" />
                 <span className="font-semibold text-primary-foreground">
-                  Unlock Semester ₹29
+                  Unlock Semester
                 </span>
                 <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
               </button>
@@ -173,7 +173,7 @@ export function Hero() {
         >
           {[
             { value: "40+", label: "Subjects Covered" },
-            { value: "₹29", label: "Per Semester" },
+            { value: "₹299", label: "Per Semester" },
             { value: "500+", label: "Students Enrolled" },
           ].map((stat, index) => (
             <div key={index} className="text-center">

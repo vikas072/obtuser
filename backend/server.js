@@ -17,10 +17,20 @@ app.get('/', (req, res) => {
   res.send('Payment server is running correctly!')
 })
 
-const PAYMENT_AMOUNT_PAISE = 2900
+const BASE_PRICE_PAISE = 29900 // ₹299
+const COUPONS = {
+  'SAVE90': 2900, // ₹29
+  'OFF90': 2900,  // ₹29
+  'EXAM90': 2900, // ₹29
+}
+
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+if (!razorpayKeyId) {
+  console.error('CRITICAL: RAZORPAY_KEY_ID is missing in environment variables.');
+}
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_Sk3cwe4bRMi6Qp',
+  key_id: razorpayKeyId,
   key_secret: process.env.RAZORPAY_SECRET,
 })
 
@@ -46,9 +56,12 @@ if (!admin.apps.length) {
 
 const firestore = admin.apps.length ? admin.firestore() : null
 
-app.post('/api/payment/create-order', async (req, res) => {
+app.post('/api/create-order', createOrderHandler)
+app.post('/api/payment/create-order', createOrderHandler)
+
+async function createOrderHandler(req, res) {
   try {
-    const { uid, semesterId, subjectIds } = req.body || {}
+    const { uid, semesterId, subjectIds, couponCode } = req.body || {}
 
     if (!uid || !semesterId) {
       return res.status(400).json({ error: 'uid and semesterId are required' })
@@ -60,14 +73,24 @@ app.post('/api/payment/create-order', async (req, res) => {
         .json({ error: 'RAZORPAY_SECRET is not configured on server' })
     }
 
+    // Calculate amount based on coupon
+    let finalAmount = BASE_PRICE_PAISE
+    if (couponCode && COUPONS[couponCode.toUpperCase()]) {
+      finalAmount = COUPONS[couponCode.toUpperCase()]
+    }
+    if (finalAmount < 100) {
+      return res.status(400).json({ error: 'Amount must be at least 100 paise' })
+    }
+
     const order = await razorpay.orders.create({
-      amount: PAYMENT_AMOUNT_PAISE,
+      amount: finalAmount,
       currency: 'INR',
-      receipt: `optusers_${uid}_${semesterId}_${Date.now()}`,
+      receipt: `order_${uid.slice(-6)}_${Date.now()}`,
       notes: {
         uid,
         semesterId,
         subjectIds: JSON.stringify(subjectIds || []),
+        couponCode: couponCode || '',
       },
     })
 
@@ -80,9 +103,12 @@ app.post('/api/payment/create-order', async (req, res) => {
     console.error('create-order failed:', error)
     return res.status(500).json({ error: 'Failed to create order' })
   }
-})
+}
 
-app.post('/api/payment/verify', async (req, res) => {
+app.post('/api/verify-payment', verifyHandler)
+app.post('/api/payment/verify', verifyHandler)
+
+async function verifyHandler(req, res) {
   try {
     const { uid, semesterId, subjectIds, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body || {}
@@ -113,6 +139,10 @@ app.post('/api/payment/verify', async (req, res) => {
     }
 
     // Update user data: mark as paid, add semester, and add individual subjects
+    // Fetch the order to get the actual amount paid
+    const order = await razorpay.orders.fetch(razorpay_order_id)
+    const amountPaid = order.amount / 100
+
     await firestore.collection('users').doc(uid).set(
       {
         isPaid: true,
@@ -123,7 +153,8 @@ app.post('/api/payment/verify', async (req, res) => {
           razorpayPaymentId: razorpay_payment_id,
           semesterId: semesterId,
           subjectIds: subjectIds || [],
-          amount: PAYMENT_AMOUNT_PAISE / 100,
+          amount: amountPaid,
+          couponCode: order.notes.couponCode || '',
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
         },
       },
@@ -135,7 +166,7 @@ app.post('/api/payment/verify', async (req, res) => {
     console.error('verify failed:', error)
     return res.status(500).json({ verified: false, error: 'Verification failed' })
   }
-})
+}
 
 const port = Number(process.env.PORT) || 5000
 app.listen(port, () => {

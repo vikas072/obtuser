@@ -121,14 +121,11 @@ export function Pricing() {
                 <p className="text-muted-foreground mb-2">Per Semester Access</p>
                 <div className="flex items-baseline justify-center md:justify-start gap-2 mb-4">
                   <span className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                    ₹29
-                  </span>
-                  <span className="text-xl text-muted-foreground line-through">
                     ₹299
                   </span>
                 </div>
                 <p className="text-sm text-accent font-medium mb-2">
-                  90% OFF - Limited Time Offer!
+                  Use coupon for 90% OFF - Limited Time!
                 </p>
                 
                 {isMounted ? (
@@ -154,7 +151,7 @@ export function Pricing() {
                     >
                       <BookOpen className="w-5 h-5 text-primary-foreground" />
                       <span className="font-semibold text-primary-foreground">
-                        Get Access ₹29
+                        Get Access
                       </span>
                       <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
                     </button>
@@ -177,7 +174,7 @@ export function Pricing() {
                       >
                         <BookOpen className="w-5 h-5 text-primary-foreground" />
                         <span className="font-semibold text-primary-foreground">
-                          Unlock Semester ₹29
+                          Unlock Semester
                         </span>
                         <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent text-xs font-bold text-primary-foreground rounded-full">PER SEM</span>
                       </button>
@@ -211,7 +208,7 @@ export function Pricing() {
             </div>
           </div>
         </motion.div>
-
+        
         {/* Trust badges */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -263,6 +260,30 @@ export function Pricing() {
             </svg>
             <span className="text-sm">500+ Students Enrolled</span>
           </div>
+        </motion.div>
+        
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex flex-wrap items-center justify-center gap-8 mt-16"
+        >
+          {[
+            { value: "40+", label: "Subjects Covered" },
+            { value: "₹299", label: "Per Semester" },
+            { value: "500+", label: "Students Enrolled" },
+          ].map((stat, index) => (
+            <div key={index} className="text-center">
+              <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {stat.value}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </motion.div>
       </div>
     </section>
