@@ -67,7 +67,8 @@ export function useRazorpay() {
       })
 
       if (!orderResponse.ok) {
-        throw new Error('Failed to create payment order.')
+        const errorData = await orderResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create payment order. Check if Vercel Environment Variables are set.');
       }
 
       const orderData = await orderResponse.json()
