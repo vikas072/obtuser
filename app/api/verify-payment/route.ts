@@ -3,9 +3,18 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { firestore, firebaseAdmin } from '@/lib/firebase-admin';
 
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '';
+const razorpaySecret = process.env.RAZORPAY_SECRET || '';
+
+console.log('Razorpay Verify Init:', {
+  keyIdPrefix: razorpayKeyId.substring(0, 8),
+  secretPrefix: razorpaySecret.substring(0, 4),
+  hasSecret: !!razorpaySecret
+});
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_SECRET || '',
+  key_id: razorpayKeyId,
+  key_secret: razorpaySecret,
 });
 
 export async function POST(req: Request) {
