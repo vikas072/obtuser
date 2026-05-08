@@ -25,8 +25,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing payment verification fields' }, { status: 400 });
     }
 
-    if (!process.env.RAZORPAY_SECRET) {
-      return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured' }, { status: 500 });
+    if (!razorpaySecret) {
+      return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured on the server. Please add it to Vercel Environment Variables.' }, { status: 500 });
+    }
+
+    if (!razorpayKeyId) {
+      return NextResponse.json({ error: 'RAZORPAY_KEY_ID is not configured. Please add it to Vercel Environment Variables.' }, { status: 500 });
     }
 
     const generatedSignature = crypto

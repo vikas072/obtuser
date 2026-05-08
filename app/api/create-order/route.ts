@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
+import { firestore } from '@/lib/firebase-admin';
 
 const BASE_PRICE_PAISE = 29900; // ₹299
 const COUPONS: Record<string, number> = {
@@ -30,8 +31,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'uid and semesterId are required' }, { status: 400 });
     }
 
-    if (!process.env.RAZORPAY_SECRET) {
-      return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured' }, { status: 500 });
+    if (!firestore) {
+      return NextResponse.json({ verified: false, error: 'Firebase Admin is not configured. Please check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on Vercel.' }, { status: 500 });
+    }
+
+    if (!razorpaySecret) {
+      return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured on the server. Please add it to Vercel Environment Variables.' }, { status: 500 });
+    }
+
+    if (!razorpayKeyId) {
+      return NextResponse.json({ error: 'RAZORPAY_KEY_ID is not configured. Please add it to Vercel Environment Variables.' }, { status: 500 });
     }
 
     // Calculate amount based on coupon
@@ -63,6 +72,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('create-order failed:', error);
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+    return NextResponse.json({ error: `Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 });
   }
 }
