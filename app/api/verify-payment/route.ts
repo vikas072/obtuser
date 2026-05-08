@@ -68,7 +68,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ verified: true });
   } catch (error: any) {
     console.error('verify failed:', error);
-    const errorMessage = error?.message || error?.description || (typeof error === 'string' ? error : 'Unknown error');
-    return NextResponse.json({ verified: false, error: `Verification failed: ${errorMessage}` }, { status: 500 });
+    let detail = 'Unknown error';
+    if (error instanceof Error) {
+      detail = error.message;
+    } else if (typeof error === 'object') {
+      detail = JSON.stringify(error);
+    } else if (typeof error === 'string') {
+      detail = error;
+    }
+    return NextResponse.json({ verified: false, error: `Verification failed: ${detail}` }, { status: 500 });
   }
 }

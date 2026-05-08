@@ -69,7 +69,14 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('create-order failed:', error);
-    const errorMessage = error?.message || error?.description || (typeof error === 'string' ? error : 'Unknown error');
-    return NextResponse.json({ error: `Failed to create order: ${errorMessage}` }, { status: 500 });
+    let detail = 'Unknown error';
+    if (error instanceof Error) {
+      detail = error.message;
+    } else if (typeof error === 'object') {
+      detail = JSON.stringify(error);
+    } else if (typeof error === 'string') {
+      detail = error;
+    }
+    return NextResponse.json({ error: `Failed to create order: ${detail}` }, { status: 500 });
   }
 }
