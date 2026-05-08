@@ -10,7 +10,6 @@ import { db } from '@/src/firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useSearchParams } from 'next/navigation'
-import GradientMenu from '@/components/ui/gradient-menu'
 
 function DashboardContent() {
   const searchParams = useSearchParams()
@@ -583,11 +582,6 @@ function DashboardContent() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Floating Gradient Menu */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] scale-75 sm:scale-100">
-        <GradientMenu />
-      </div>
     </main>
   )
 }

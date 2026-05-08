@@ -82,7 +82,7 @@ export function YearCards() {
   };
 
   return (
-    <section className="relative px-4">
+    <section className="relative py-24 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
         <motion.div
