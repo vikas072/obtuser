@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getFirebaseError } from '@/lib/firebase-admin';
 
 const BASE_PRICE_PAISE = 29900; // ₹299
 const COUPONS: Record<string, number> = {
@@ -20,11 +20,11 @@ export async function POST(req: Request) {
     }
 
     if (!firestore) {
-      return NextResponse.json({ verified: false, error: 'Firebase Admin is not configured. Please check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on Vercel.' }, { status: 500 });
+      return NextResponse.json({ error: getFirebaseError() || 'Firebase Admin is not configured.' }, { status: 500 });
     }
 
-    const rzpKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const rzpSecret = process.env.RAZORPAY_SECRET;
+    const rzpKeyId = (process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
+    const rzpSecret = (process.env.RAZORPAY_SECRET || '').trim();
 
     if (!rzpSecret) {
       return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured on the server. Please add it to Vercel Environment Variables.' }, { status: 500 });
