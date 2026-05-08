@@ -9,19 +9,7 @@ const COUPONS: Record<string, number> = {
   'EXAM90': 2900, // ₹29
 };
 
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '';
-const razorpaySecret = process.env.RAZORPAY_SECRET || '';
-
-console.log('Razorpay Initialization:', {
-  keyIdPrefix: razorpayKeyId.substring(0, 8),
-  secretPrefix: razorpaySecret.substring(0, 4),
-  hasSecret: !!razorpaySecret
-});
-
-const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
-  key_secret: razorpaySecret,
-});
+// Removed global init to handle it inside the POST function for better error reporting
 
 export async function POST(req: Request) {
   try {
@@ -35,13 +23,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ verified: false, error: 'Firebase Admin is not configured. Please check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on Vercel.' }, { status: 500 });
     }
 
-    if (!razorpaySecret) {
+    const rzpKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const rzpSecret = process.env.RAZORPAY_SECRET;
+
+    if (!rzpSecret) {
       return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured on the server. Please add it to Vercel Environment Variables.' }, { status: 500 });
     }
 
-    if (!razorpayKeyId) {
+    if (!rzpKeyId) {
       return NextResponse.json({ error: 'RAZORPAY_KEY_ID is not configured. Please add it to Vercel Environment Variables.' }, { status: 500 });
     }
+
+    // Initialize Razorpay inside the handler to catch initialization errors
+    const razorpay = new Razorpay({
+      key_id: rzpKeyId,
+      key_secret: rzpSecret,
+    });
 
     // Calculate amount based on coupon
     let finalAmount = BASE_PRICE_PAISE;
@@ -70,8 +67,9 @@ export async function POST(req: Request) {
       amount: order.amount,
       currency: order.currency,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('create-order failed:', error);
-    return NextResponse.json({ error: `Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 });
+    const errorMessage = error?.message || error?.description || (typeof error === 'string' ? error : 'Unknown error');
+    return NextResponse.json({ error: `Failed to create order: ${errorMessage}` }, { status: 500 });
   }
 }
