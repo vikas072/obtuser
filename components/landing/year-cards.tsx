@@ -10,7 +10,7 @@ const years = [
   {
     id: 1,
     year: "1st Year",
-    subjects: "Physics, Chemistry, Maths-I & II, Basic Engineering",
+    subjects: "Mathematics 1 & 2, Physics, Chemistry, PPS, EVS & more",
     icon: BookOpen,
     color: "from-emerald-500 to-teal-500",
     shadow: "shadow-emerald-500/20",
@@ -19,7 +19,7 @@ const years = [
   {
     id: 2,
     year: "2nd Year",
-    subjects: "Data Structures, Python, Maths-III & IV, Soft Skills",
+    subjects: "Data Structure, Python, OOP Java, COA, OS, Cyber Security & more",
     icon: Code,
     color: "from-blue-500 to-cyan-500",
     shadow: "shadow-blue-500/20",

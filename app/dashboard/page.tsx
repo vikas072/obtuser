@@ -37,21 +37,19 @@ function DashboardContent() {
   const years = [1, 2, 3, 4]
   const semestersForYear = selectedYear ? [selectedYear * 2 - 1, selectedYear * 2] : []
 
+  const displayedSubjects = selectedSemester ? subjects.filter((s: any) => s.semester === selectedSemester) : subjects;
+
   useEffect(() => {
     if (!user) return;
     
     const fetchSubjects = async () => {
       setIsFetching(true);
       try {
-        let q = query(
+        const q = query(
           collection(db as any, 'content'),
           where('year', '==', selectedYear),
           where('branch', '==', selectedBranch)
         );
-
-        if (selectedSemester) {
-          q = query(q, where('semester', '==', selectedSemester));
-        }
 
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -69,7 +67,7 @@ function DashboardContent() {
     };
 
     fetchSubjects();
-  }, [selectedYear, selectedBranch, selectedSemester, user]);
+  }, [selectedYear, selectedBranch, user]);
 
   const getRequiredCount = (year: number) => {
     if (year === 1) return 5;
@@ -78,14 +76,35 @@ function DashboardContent() {
     return 5; // Default for 4th year or others
   };
 
-  const handleUnlockClick = (semester: number) => {
-    const semSubjects = subjects.filter(s => s.semester === semester);
-    setSelectionModal({
-      open: true,
-      semester,
-      subjects: semSubjects
-    });
-    setSelectedSubjectIds([]);
+  const handleUnlockClick = async (semester: number) => {
+    setIsFetching(true);
+    try {
+      // Explicitly fetch all subjects for the year/branch to ensure full selection in modal
+      const q = query(
+        collection(db as any, 'content'),
+        where('year', '==', selectedYear),
+        where('branch', '==', selectedBranch)
+      );
+      
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      
+      // Deduplicate and sort
+      const allYearSubjects = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
+      allYearSubjects.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
+
+      setSelectionModal({
+        open: true,
+        semester,
+        subjects: allYearSubjects
+      });
+      setSelectedSubjectIds([]);
+    } catch (error) {
+      console.error("Error fetching subjects for modal:", error);
+      toast.error("Failed to load subjects for selection.");
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   const toggleSubjectSelection = (id: string) => {
@@ -277,8 +296,8 @@ function DashboardContent() {
           </div>
 
           {/* Top CTA for Locked Semesters */}
-          {!isFetching && subjects.length > 0 && (() => {
-            const displayedSems = Array.from(new Set(subjects.map(s => s.semester))).sort((a, b) => a - b);
+          {!isFetching && displayedSubjects.length > 0 && (() => {
+            const displayedSems = Array.from(new Set(displayedSubjects.map((s: any) => s.semester))).sort((a: any, b: any) => a - b);
             
             // A semester is considered "locked" if there are any subjects in it that the user hasn't unlocked yet
             const lockedSems = displayedSems.filter(sem => {
@@ -332,12 +351,12 @@ function DashboardContent() {
                    </div>
                 </div>
               ))
-            ) : subjects.length === 0 ? (
+            ) : displayedSubjects.length === 0 ? (
               <div className="col-span-full py-12 text-center border border-dashed border-border rounded-2xl bg-card/50">
                 <p className="text-muted-foreground text-lg">No subjects found for this criteria.</p>
               </div>
             ) : (
-              subjects.map((subject) => {
+              displayedSubjects.map((subject: any) => {
                 // Ensure semester is treated as a number and semId is correctly formatted
                 const semNumber = Number(subject.semester);
                 const semId = semNumber ? `sem${semNumber}` : 'locked';
@@ -357,7 +376,7 @@ function DashboardContent() {
                     {/* Subject name — always visible and clear */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-semibold text-lg truncate">{subject.subject}</h3>
+                        <h3 className="font-semibold text-lg truncate" title={subject.subject}>{subject.subject}</h3>
                         {!isUnlocked && (
                           <div className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center gap-1.5 shrink-0">
                             <Lock className="w-3 h-3 text-amber-500" />
@@ -444,7 +463,7 @@ function DashboardContent() {
                         : 'bg-secondary/20 border-border hover:border-primary/50'}`}
                 >
                   <div className="min-w-0">
-                    <p className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                    <p className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`} title={subject.subject}>
                       {subject.subject}
                     </p>
                     <p className="text-xs text-muted-foreground">
