@@ -24,6 +24,13 @@
   --input: rgba(30, 41, 59, 0.8);
   --ring: #6366f1;
   --radius: 0.75rem;
+  --gradient-color: #6366f1;
+  --sparkles-color: #6366f1;
+}
+
+.dark {
+  --gradient-color: #6366f1;
+  --sparkles-color: #ffffff;
 }
 
 @theme inline {
@@ -52,6 +59,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-sparkles-color: var(--sparkles-color);
+  --color-gradient-color: var(--gradient-color);
 }
 
 @layer base {
