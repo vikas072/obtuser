@@ -44,8 +44,8 @@ export async function POST(req: Request) {
     });
 
     // Fetch the order to get the actual amount paid
-    const order = await razorpay.orders.fetch(razorpay_order_id);
-    const amountPaid = order.amount / 100;
+    const order = await razorpay.orders.fetch(razorpay_order_id) as any;
+    const amountPaid = Number(order.amount) / 100;
 
     await firestore.collection('users').doc(uid).set(
       {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
           semesterId: semesterId,
           subjectIds: subjectIds || [],
           amount: amountPaid,
-          couponCode: order.notes.couponCode || '',
+          couponCode: order.notes?.couponCode || '',
           timestamp: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
         },
       },

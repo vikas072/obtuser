@@ -23,14 +23,16 @@
   --border: rgba(99, 102, 241, 0.2);
   --input: rgba(30, 41, 59, 0.8);
   --ring: #6366f1;
+  --skeleton: hsl(0, 0%, 90%);
+  --btn-border: hsl(214deg, 31.8%, 91.4%);
   --radius: 0.75rem;
-  --gradient-color: #6366f1;
-  --sparkles-color: #6366f1;
 }
 
 .dark {
-  --gradient-color: #6366f1;
-  --sparkles-color: #ffffff;
+  --background: #060818;
+  --foreground: #e2e8f0;
+  --skeleton: hsl(218, 36%, 16%);
+  --btn-border: hsl(217deg, 32.6%, 17.5%);
 }
 
 @theme inline {
@@ -59,8 +61,30 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sparkles-color: var(--sparkles-color);
-  --color-gradient-color: var(--gradient-color);
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  --animate-float: float 3s ease-in-out infinite;
+  
+  @keyframes ripple {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(0.9); }
+  }
+  --animate-ripple: ripple 2s ease infinite;
+
+  @keyframes orbit {
+    0% {
+      transform: rotate(0deg) translateY(calc(var(--radius) * 1px)) rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg) translateY(calc(var(--radius) * 1px)) rotate(-360deg);
+    }
+  }
+  --animate-orbit: orbit calc(var(--duration) * 1s) linear infinite;
+
+  --shadow-input: 0px 2px 3px -1px rgba(0, 0, 0, 0.1), 0px 1px 0px 0px rgba(25, 28, 33, 0.02), 0px 0px 0px 1px rgba(25, 28, 33, 0.08);
 }
 
 @layer base {
