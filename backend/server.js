@@ -60,6 +60,10 @@ app.post('/api/create-order', createOrderHandler)
 app.post('/api/payment/create-order', createOrderHandler)
 
 async function createOrderHandler(req, res) {
+  console.log('--- BACKEND SERVER DEBUG START ---');
+  console.log('Request to legacy backend /api/create-order');
+  console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
+  console.log('--- BACKEND SERVER DEBUG END ---');
   try {
     const { uid, semesterId, subjectIds, couponCode } = req.body || {}
 

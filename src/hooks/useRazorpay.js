@@ -57,6 +57,10 @@ export function useRazorpay() {
       }
 
       const apiBaseUrl = '' // Use relative paths for Next.js API routes
+      
+      console.log('--- FRONTEND PAYMENT DEBUG ---');
+      console.log('Fetching order from:', `${apiBaseUrl}/api/create-order`);
+      console.log('------------------------------');
 
       const orderResponse = await fetch(`${apiBaseUrl}/api/create-order`, {
         method: 'POST',

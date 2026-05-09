@@ -26,6 +26,11 @@ export async function POST(req: Request) {
     const rzpKeyId = (process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
     const rzpSecret = (process.env.RAZORPAY_SECRET || '').trim();
 
+    console.log('--- RAZORPAY DEBUG START ---');
+    console.log('rzpKeyId:', rzpKeyId);
+    console.log('rzpSecret:', rzpSecret);
+    console.log('--- RAZORPAY DEBUG END ---');
+
     if (!rzpSecret) {
       return NextResponse.json({ error: 'RAZORPAY_SECRET is not configured on the server. Please add it to Vercel Environment Variables.' }, { status: 500 });
     }
