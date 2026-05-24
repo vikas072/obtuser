@@ -301,35 +301,37 @@ function DashboardContent() {
     setIsFetching(true);
     try {
       const handwrittenSubjects = buildCurriculumSubjectRows(selectedYear, selectedBranch);
+      const semesterSubjects = handwrittenSubjects?.filter((subject) => subject.semester === semester) || [];
 
       if (handwrittenSubjects) {
         setSelectionModal({
           open: true,
           semester,
-          subjects: handwrittenSubjects,
+          subjects: semesterSubjects,
         });
         setSelectedSubjectIds([]);
         return;
       }
 
-      // Explicitly fetch all subjects for the year/branch to ensure full selection in modal
+      // Explicitly fetch all subjects for the year/branch/semester to ensure correct selection in modal
       const q = query(
         collection(db as any, 'content'),
         where('year', '==', selectedYear),
-        where('branch', '==', selectedBranchCanonical)
+        where('branch', '==', selectedBranchCanonical),
+        where('semester', '==', semester)
       );
       
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       
       // Deduplicate and sort
-      const allYearSubjects = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
-      allYearSubjects.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
+      const semesterOnlySubjects = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
+      semesterOnlySubjects.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
 
       setSelectionModal({
         open: true,
         semester,
-        subjects: allYearSubjects
+        subjects: semesterOnlySubjects
       });
       setSelectedSubjectIds([]);
     } catch (error) {
