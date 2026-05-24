@@ -30,7 +30,7 @@ if (!admin.apps.length) {
 
 const firestore = admin.firestore()
 
-const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
+const branches = ['CSE & Allied', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT']
 const years = [1, 2, 3, 4]
 
 // Sample subjects per year - expanded to ensure selection rules (5 or 6 subjects) work

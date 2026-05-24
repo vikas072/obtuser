@@ -6,9 +6,9 @@ export async function GET() {
 
   return NextResponse.json({
     hasKeyId: !!rzpKeyId,
-    keyIdPrefix: rzpKeyId.slice(0, 8),
+    keyIdPrefix: rzpKeyId.slice(0, 15),
     hasSecret: !!rzpSecret,
-    secretPrefix: rzpSecret.slice(0, 4),
+    secretPrefix: rzpSecret.slice(0, 8),
     envLoaded: process.env.NODE_ENV,
     timestamp: new Date().toISOString()
   });

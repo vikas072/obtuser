@@ -30,25 +30,78 @@ if (!admin.apps.length) {
 
 const firestore = admin.firestore()
 
-// We apply to all branches so the user's dashboard isn't empty, 
-// even though these are CS/AI specific.
-const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
-
-// 12 new subjects for 2nd Year
-const subjects2ndYear = [
-  'Mathematics 3',
-  'Mathematics 4',
-  'Technical Communication',
-  'Universal Human Value',
-  'Data Structure',
-  'Python',
-  'OOP Java',
-  'Digital Electronic',
-  'COA (Computer Organization & Architecture)',
-  'Operating System',
-  'TAFL (Theory of Automata & Formal Languages)',
-  'Cyber Security'
-]
+const subjectsByBranch = {
+  'Mechanical Engineering': [
+    'Technical Communication',
+    'Human Value',
+    'Math-IV',
+    'Digital Electronics',
+    'SOM',
+    'Manufacturing Processes',
+    'ATD',
+    'TD',
+    'Python',
+    'Cyber Security',
+    'FM',
+    'ME',
+  ],
+  EEE: [
+    'Technical Communication',
+    'Human Value',
+    'Python',
+    'Cyber Security',
+    'Maths-IV',
+    'Digital Electronics',
+    'NAS',
+    'Digital Electronics Lab',
+    'EM-I',
+    'EMI',
+    'EMFT',
+    'BSS',
+  ],
+  ECE: [
+    'Technical Communication',
+    'Human Value',
+    'Python',
+    'Cyber Security',
+    'Math-IV',
+    'Digital Electronics',
+    'Signal System',
+    'Analog',
+    'CE',
+    'NAS',
+    'DSD',
+    'ED',
+  ],
+  'Civil Engineering': [
+    'Technical Communication',
+    'Python',
+    'Human Value',
+    'Math-IV',
+    'Digital Electronics',
+    'MTCP',
+    'SOM',
+    'HEM',
+    'Surveying',
+    'FM',
+    'EM',
+    'Cyber Security',
+  ],
+  'CSE & Allied': [
+    'Data Structure',
+    'Computer Organization & Architecture (COA)',
+    'Python Programming',
+    'DSTL',
+    'Mathematics IV',
+    'Technical Communication',
+    'Human Values',
+    'Cyber Security',
+    'Digital Electronics',
+    'Object Oriented Programming with Java (OOP with Java)',
+    'TAFL (Theory of Automata & Formal Languages)',
+    'Operating System',
+  ],
+}
 
 async function update2ndYearSubjects() {
   console.log('Starting to update 2nd Year subjects...')
@@ -73,33 +126,21 @@ async function update2ndYearSubjects() {
     console.log('No existing 2nd Year subjects found to delete.')
   }
 
-  // 2. Insert new 12 subjects for all branches
+  // 2. Insert new branch-specific 2nd Year subjects
   const insertBatch = firestore.batch()
   let insertCount = 0
 
-  for (const branch of branches) {
-    for (let i = 0; i < subjects2ndYear.length; i++) {
-      const subjectName = subjects2ndYear[i]
-      
-      // Let's divide them into Semester 3 and Semester 4 (6 subjects each)
-      let semester = 3;
-      if ([
-        'Mathematics 4', 
-        'Universal Human Value', 
-        'Python', 
-        'Operating System', 
-        'TAFL (Theory of Automata & Formal Languages)', 
-        'Cyber Security'
-      ].includes(subjectName)) {
-        semester = 4;
-      }
+  for (const [branch, subjects] of Object.entries(subjectsByBranch)) {
+    for (let i = 0; i < subjects.length; i++) {
+      const subjectName = subjects[i]
+      const semester = i < 6 ? 3 : 4
       
       const newDocRef = contentRef.doc()
 
       insertBatch.set(newDocRef, {
         year: 2,
         branch,
-        subject: `${subjectName} (${branch})`,
+        subject: subjectName,
         semester,
         notesURL: `https://example.com/notes/${branch.toLowerCase()}/year2/${subjectName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
         videoURL: `https://example.com/video/${branch.toLowerCase()}/year2/${subjectName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,

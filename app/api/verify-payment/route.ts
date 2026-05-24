@@ -13,14 +13,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing payment verification fields' }, { status: 400 });
     }
 
-    const rzpKeyId = (process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
-    const rzpSecret = (process.env.RAZORPAY_SECRET || '').trim();
+    const rzpKeyId = (process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim().replace(/^['"]|['"]$/g, '');
+    const rzpSecret = (process.env.RAZORPAY_SECRET || process.env.RAZORPAY_KEY_SECRET || '').trim().replace(/^['"]|['"]$/g, '');
 
     console.log('Razorpay Auth Check (verify-payment):', {
       hasKeyId: !!rzpKeyId,
-      keyIdPrefix: rzpKeyId.slice(0, 8),
+      keyIdPrefix: rzpKeyId.slice(0, 15),
+      keyIdLength: rzpKeyId.length,
       hasSecret: !!rzpSecret,
-      secretPrefix: rzpSecret.slice(0, 4),
+      secretLength: rzpSecret.length,
     });
 
     if (!rzpSecret) {

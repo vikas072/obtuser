@@ -11,6 +11,204 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useSearchParams } from 'next/navigation'
 
+const firstYearSubjects = [
+  'Physics',
+  'Chemistry',
+  'Mathematics-I',
+  'Mathematics-II',
+  'Basic Electrical Engineering',
+  'Environmental Science',
+  'Engineering Graphics',
+  'Communication Skills',
+]
+
+const firstYearBranchSubjects: Record<string, string[]> = {
+  'CSE & Allied': firstYearSubjects,
+  CSE: firstYearSubjects,
+  ECE: firstYearSubjects,
+  EEE: firstYearSubjects,
+  'Mechanical Engineering': firstYearSubjects,
+  'Civil Engineering': firstYearSubjects,
+}
+
+const secondYearBranchSubjects: Record<string, string[]> = {
+  'CSE & Allied': [
+    'Data Structure',
+    'Computer Organization & Architecture (COA)',
+    'Python Programming',
+    'DSTL',
+    'Mathematics IV',
+    'Technical Communication',
+    'Human Values',
+    'Cyber Security',
+    'Digital Electronics',
+    'Object Oriented Programming with Java (OOP with Java)',
+    'TAFL (Theory of Automata & Formal Languages)',
+    'Operating System',
+  ],
+  CSE: [
+    'Data Structure',
+    'Computer Organization & Architecture (COA)',
+    'Python Programming',
+    'DSTL',
+    'Mathematics IV',
+    'Technical Communication',
+    'Human Values',
+    'Cyber Security',
+    'Digital Electronics',
+    'Object Oriented Programming with Java (OOP with Java)',
+    'TAFL (Theory of Automata & Formal Languages)',
+    'Operating System',
+  ],
+  'Mechanical Engineering': [
+    'Technical Communication',
+    'Human Value',
+    'Math-IV',
+    'Digital Electronics',
+    'SOM',
+    'Manufacturing Processes',
+    'ATD',
+    'TD',
+    'Python',
+    'Cyber Security',
+    'FM',
+    'ME',
+  ],
+  EEE: [
+    'Technical Communication',
+    'Human Value',
+    'Python',
+    'Cyber Security',
+    'Maths-IV',
+    'Digital Electronics',
+    'NAS',
+    'Digital Electronics Lab',
+    'EM-I',
+    'EMI',
+    'EMFT',
+    'BSS',
+  ],
+  ECE: [
+    'Technical Communication',
+    'Human Value',
+    'Python',
+    'Cyber Security',
+    'Math-IV',
+    'Digital Electronics',
+    'Signal System',
+    'Analog',
+    'CE',
+    'NAS',
+    'DSD',
+    'ED',
+  ],
+  'Civil Engineering': [
+    'Technical Communication',
+    'Python',
+    'Human Value',
+    'Math-IV',
+    'Digital Electronics',
+    'MTCP',
+    'SOM',
+    'HEM',
+    'Surveying',
+    'FM',
+    'EM',
+    'Cyber Security',
+  ],
+}
+
+const thirdYearBranchSubjects: Record<string, string[]> = {
+  'CSE & Allied': [
+    'Constitution of India',
+    'Essence of Indian Traditional Knowledge',
+    'DBMS',
+    'Web Technology',
+    'DAA',
+    'Software Engineering',
+    'Compiler Design',
+    'Computer Networks',
+  ],
+  'Civil Engineering': [
+    'Constitution of India',
+    'Essence of Indian Traditional Knowledge',
+    'Geotechnical Engineering',
+    'Structural Analysis',
+    'Quantity Estimation and Construction Management',
+  ],
+  EEE: [
+    'Constitution of India',
+    'Essence of Indian Traditional Knowledge',
+    'Power System - I',
+    'Control System',
+    'Electrical Machines - II',
+    'Power System - II',
+    'Power Electronics',
+    'Microprocessor',
+  ],
+  ECE: [
+    'Constitution of India',
+    'Essence of Indian Traditional Knowledge',
+    'Integrated Circuits',
+    'Microprocessor & Microcontroller',
+    'Digital Signal Processing',
+    'Digital Communication',
+    'Control System',
+    'Antenna and Wave Propagation',
+  ],
+  'Mechanical Engineering': [
+    'Constitution of India',
+    'Essence of Indian Traditional Knowledge',
+    'Heat & Mass Transfer',
+    'Machine Design',
+    'Industrial Engineering',
+    'Refrigeration and AC',
+    'CAD',
+    'CAM',
+    'Theory of Machine',
+  ],
+}
+
+const curriculumSubjectsByYear: Record<number, Record<string, string[]>> = {
+  1: firstYearBranchSubjects,
+  2: secondYearBranchSubjects,
+  3: thirdYearBranchSubjects,
+}
+
+const branchAliases: Record<string, string> = {
+  'CSE & ALLIED': 'CSE & Allied',
+  CSE: 'CSE & Allied',
+  Allied: 'CSE & Allied',
+  Mechanical: 'Mechanical Engineering',
+  MECHANICAL: 'Mechanical Engineering',
+  Civil: 'Civil Engineering',
+  CIVIL: 'Civil Engineering',
+}
+
+const getCurriculumBranch = (branch: string) => branchAliases[branch] || branch
+
+const getCurriculumSubjects = (year: number, branch: string) => {
+  const curriculumBranch = getCurriculumBranch(branch)
+  return curriculumSubjectsByYear[year]?.[curriculumBranch] || null
+}
+
+const buildCurriculumSubjectRows = (year: number, branch: string) => {
+  const curriculumBranch = getCurriculumBranch(branch)
+  const subjects = getCurriculumSubjects(year, curriculumBranch)
+
+  if (!subjects) return null
+
+  return subjects.map((subject, index) => ({
+    id: `year${year}-${curriculumBranch.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${subject.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    year,
+    branch: curriculumBranch,
+    subject,
+    semester: index < Math.ceil(subjects.length / 2) ? year * 2 - 1 : year * 2,
+    notesURL: '',
+    videoURL: '',
+  }))
+}
+
 function DashboardContent() {
   const searchParams = useSearchParams()
   const { user, isPaid, purchasedSemesters, unlockedSubjects, loading, logout } = useAuth() as any
@@ -22,7 +220,7 @@ function DashboardContent() {
   const [isCouponValid, setIsCouponValid] = useState(false)
 
   const initialYear = Number(searchParams.get('year')) || 1
-  const initialBranch = searchParams.get('branch') || 'CSE'
+  const initialBranch = getCurriculumBranch(searchParams.get('branch') || 'CSE & Allied')
   const initialSemester = Number(searchParams.get('semester')) || null
 
   const [selectedYear, setSelectedYear] = useState<number>(initialYear)
@@ -31,9 +229,12 @@ function DashboardContent() {
   const [subjects, setSubjects] = useState<any[]>([])
   const [isFetching, setIsFetching] = useState(true)
 
+  const selectedBranchCanonical = getCurriculumBranch(selectedBranch)
+  const driveSubjectLink = 'https://drive.google.com/drive/folders/13SPbwkppOIMEdQowxMOl9RZtupf_xkg-?usp=share_link'
+
   const [activeMedia, setActiveMedia] = useState<{ type: 'video' | 'notes' | null; url: string; title: string }>({ type: null, url: '', title: '' })
 
-  const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
+  const branches = ['CSE & Allied', 'CSE', 'ECE', 'EEE', 'Mechanical Engineering', 'Civil Engineering']
   const years = [1, 2, 3, 4]
   const semestersForYear = selectedYear ? [selectedYear * 2 - 1, selectedYear * 2] : []
 
@@ -45,10 +246,17 @@ function DashboardContent() {
     const fetchSubjects = async () => {
       setIsFetching(true);
       try {
+        const handwrittenSubjects = buildCurriculumSubjectRows(selectedYear, selectedBranch);
+
+        if (handwrittenSubjects) {
+          setSubjects(handwrittenSubjects);
+          return;
+        }
+
         const q = query(
           collection(db as any, 'content'),
           where('year', '==', selectedYear),
-          where('branch', '==', selectedBranch)
+          where('branch', '==', selectedBranchCanonical)
         );
 
         const snapshot = await getDocs(q);
@@ -56,6 +264,19 @@ function DashboardContent() {
         
         // Deduplicate and sort alphabetically by subject name
         const uniqueData = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
+
+        if (selectedYear === 1 && selectedBranchCanonical === 'CSE & Allied' && !uniqueData.some((item: any) => item.subject === 'Engineering Chemistry')) {
+          uniqueData.push({
+            id: 'engineering-chemistry-drive',
+            year: 1,
+            branch: selectedBranchCanonical,
+            subject: 'Engineering Chemistry',
+            semester: 1,
+            notesURL: driveSubjectLink,
+            videoURL: '',
+          })
+        }
+
         uniqueData.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
         setSubjects(uniqueData);
       } catch (error) {
@@ -79,11 +300,23 @@ function DashboardContent() {
   const handleUnlockClick = async (semester: number) => {
     setIsFetching(true);
     try {
+      const handwrittenSubjects = buildCurriculumSubjectRows(selectedYear, selectedBranch);
+
+      if (handwrittenSubjects) {
+        setSelectionModal({
+          open: true,
+          semester,
+          subjects: handwrittenSubjects,
+        });
+        setSelectedSubjectIds([]);
+        return;
+      }
+
       // Explicitly fetch all subjects for the year/branch to ensure full selection in modal
       const q = query(
         collection(db as any, 'content'),
         where('year', '==', selectedYear),
-        where('branch', '==', selectedBranch)
+        where('branch', '==', selectedBranchCanonical)
       );
       
       const snapshot = await getDocs(q);
@@ -161,10 +394,12 @@ function DashboardContent() {
     )
   }
 
+  const isGoogleDriveUrl = (url: string) => url?.includes('drive.google.com')
+
   const handleAccess = (type: 'video' | 'notes', subject: any, semester: number, url: string) => {
     // A subject is unlocked if its ID is in unlockedSubjects OR if the whole semester is purchased (for backward compatibility)
     const semId = `sem${semester}`;
-    const hasAccess = unlockedSubjects?.includes(subject.id) || purchasedSemesters?.includes(semId);
+    const hasAccess = unlockedSubjects?.includes(subject.id) || purchasedSemesters?.includes(semId) || isGoogleDriveUrl(url);
 
     if (!hasAccess) {
       toast.error(
@@ -178,6 +413,11 @@ function DashboardContent() {
     
     if (!url) {
       toast.error(`No ${type} URL provided for this subject.`);
+      return;
+    }
+
+    if (isGoogleDriveUrl(url)) {
+      window.open(url, '_blank', 'noreferrer');
       return;
     }
     
@@ -227,6 +467,11 @@ function DashboardContent() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-2xl font-bold">Your Subjects</h2>
+            {getCurriculumSubjects(selectedYear, selectedBranch) && (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {getCurriculumBranch(selectedBranch)} - {selectedYear}{selectedYear === 1 ? 'st' : selectedYear === 2 ? 'nd' : selectedYear === 3 ? 'rd' : 'th'} Year
+              </span>
+            )}
             
             {/* Progress Indicator */}
             <div className="flex items-center gap-3">
@@ -363,7 +608,7 @@ function DashboardContent() {
                 
                 // Subject is unlocked if its specific ID is in unlockedSubjects
                 // Or if the whole semester was purchased previously (backward compatibility)
-                const isUnlocked = unlockedSubjects?.includes(subject.id) || (semId !== 'locked' && (purchasedSemesters || []).includes(semId));
+                const isUnlocked = unlockedSubjects?.includes(subject.id) || (semId !== 'locked' && (purchasedSemesters || []).includes(semId)) || isGoogleDriveUrl(subject.notesURL) || isGoogleDriveUrl(subject.videoURL);
 
                 return (
                   <div 
@@ -391,20 +636,45 @@ function DashboardContent() {
                     <div className="flex gap-2 shrink-0">
                       {isUnlocked ? (
                         <>
-                          <button 
-                            onClick={() => handleAccess('video', subject, subject.semester, subject.videoURL)}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-sm font-medium"
-                          >
-                            <PlayCircle className="w-4 h-4" />
-                            Video
-                          </button>
-                          <button 
-                            onClick={() => handleAccess('notes', subject, subject.semester, subject.notesURL)}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-all text-sm font-medium"
-                          >
-                            <FileText className="w-4 h-4" />
-                            Notes
-                          </button>
+                          {isGoogleDriveUrl(subject.videoURL) ? (
+                            <a
+                              href={subject.videoURL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-sm font-medium"
+                            >
+                              <PlayCircle className="w-4 h-4" />
+                              Video
+                            </a>
+                          ) : (
+                            <button 
+                              onClick={() => handleAccess('video', subject, subject.semester, subject.videoURL)}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-sm font-medium"
+                            >
+                              <PlayCircle className="w-4 h-4" />
+                              Video
+                            </button>
+                          )}
+
+                          {isGoogleDriveUrl(subject.notesURL) ? (
+                            <a
+                              href={subject.notesURL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-all text-sm font-medium"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Notes
+                            </a>
+                          ) : (
+                            <button 
+                              onClick={() => handleAccess('notes', subject, subject.semester, subject.notesURL)}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-all text-sm font-medium"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Notes
+                            </button>
+                          )}
                         </>
                       ) : (
                         <button 

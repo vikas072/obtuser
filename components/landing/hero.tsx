@@ -17,7 +17,6 @@ export function Hero() {
   const handleGoogleLogin = async () => {
     try {
       await login();
-      router.push("/dashboard");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Google login failed. Please try again.";

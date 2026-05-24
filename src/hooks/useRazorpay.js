@@ -77,6 +77,12 @@ export function useRazorpay() {
 
       const orderData = await orderResponse.json()
 
+      if (orderData.devBypass) {
+        await refreshUserData(user.uid)
+        toast.success('Selected subjects unlocked for local preview.')
+        return
+      }
+
       const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       console.log('Frontend Razorpay Key:', razorpayKey);
       

@@ -30,7 +30,7 @@ if (!admin.apps.length) {
 
 const firestore = admin.firestore()
 
-const branches = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Allied']
+const branches = ['CSE & Allied', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT']
 
 // 10 new subjects for 1st Year
 const subjects1stYear = [
@@ -73,6 +73,10 @@ async function update1stYearSubjects() {
   const insertBatch = firestore.batch()
   let insertCount = 0
 
+  const customNotesURLs = {
+    'Engineering Chemistry': 'https://drive.google.com/drive/folders/13SPbwkppOIMEdQowxMOl9RZtupf_xkg',
+  }
+
   for (const branch of branches) {
     for (let i = 0; i < subjects1stYear.length; i++) {
       const subjectName = subjects1stYear[i]
@@ -85,6 +89,7 @@ async function update1stYearSubjects() {
         semester = 2;
       }
       
+      const notesURL = customNotesURLs[subjectName] || `https://example.com/notes/${branch.toLowerCase()}/year1/${subjectName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`
       const newDocRef = contentRef.doc()
 
       insertBatch.set(newDocRef, {
@@ -92,7 +97,7 @@ async function update1stYearSubjects() {
         branch,
         subject: `${subjectName} (${branch})`,
         semester,
-        notesURL: `https://example.com/notes/${branch.toLowerCase()}/year1/${subjectName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
+        notesURL,
         videoURL: `https://example.com/video/${branch.toLowerCase()}/year1/${subjectName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       })
