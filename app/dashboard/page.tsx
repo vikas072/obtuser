@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/src/AuthContext'
 import { toast } from 'sonner'
-import { PlayCircle, FileText, LogOut, Home, Lock, Filter, BookOpen, GraduationCap, Sparkles, Zap, CreditCard } from 'lucide-react'
-import { useRazorpay } from '@/src/hooks/useRazorpay'
+import { PlayCircle, FileText, LogOut, Home, Lock, Filter, BookOpen, GraduationCap, Sparkles } from 'lucide-react'
 import { db } from '@/src/firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -211,13 +210,11 @@ const buildCurriculumSubjectRows = (year: number, branch: string) => {
 
 function DashboardContent() {
   const searchParams = useSearchParams()
-  const { user, isPaid, purchasedSemesters, unlockedSubjects, loading, logout } = useAuth() as any
-  const { startPayment, isLoading } = useRazorpay()
+  const { user, isPaid, purchasedSemesters, unlockedSubjects, loading, logout, refreshUserData } = useAuth() as any
+  const [isUnlocking, setIsUnlocking] = useState(false)
 
   const [selectionModal, setSelectionModal] = useState<{ open: boolean; semester: number; subjects: any[] }>({ open: false, semester: 0, subjects: [] })
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
-  const [couponCode, setCouponCode] = useState('')
-  const [isCouponValid, setIsCouponValid] = useState(false)
 
   const initialYear = Number(searchParams.get('year')) || 1
   const initialBranch = getCurriculumBranch(searchParams.get('branch') || 'CSE & Allied')
@@ -242,7 +239,7 @@ function DashboardContent() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchSubjects = async () => {
       setIsFetching(true);
       try {
@@ -261,7 +258,7 @@ function DashboardContent() {
 
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        
+
         // Deduplicate and sort alphabetically by subject name
         const uniqueData = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
 
@@ -320,10 +317,10 @@ function DashboardContent() {
         where('branch', '==', selectedBranchCanonical),
         where('semester', '==', semester)
       );
-      
+
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      
+
       // Deduplicate and sort
       const semesterOnlySubjects = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
       semesterOnlySubjects.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
@@ -356,7 +353,7 @@ function DashboardContent() {
     });
   };
 
-  const handleConfirmUnlock = async (method: 'upi' | 'card' = 'card') => {
+  const handleConfirmUnlock = async () => {
     const limit = getRequiredCount(selectedYear);
     if (selectedSubjectIds.length !== limit) {
       toast.error(`Please select exactly ${limit} subjects.`);
@@ -364,9 +361,30 @@ function DashboardContent() {
     }
 
     const semId = `sem${selectionModal.semester}`;
-    await startPayment(semId, selectedSubjectIds, couponCode, (method === 'upi' ? 'upi' : null) as any);
-    setSelectionModal(prev => ({ ...prev, open: false }));
-    setCouponCode('');
+    setIsUnlocking(true);
+
+    try {
+      const response = await fetch('/api/unlock-subjects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, semesterId: semId, subjectIds: selectedSubjectIds }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Unable to unlock subjects.');
+      }
+
+      await refreshUserData(user.uid);
+      toast.success('Selected subjects unlocked successfully!');
+      setSelectionModal(prev => ({ ...prev, open: false }));
+      setSelectedSubjectIds([]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to unlock subjects.';
+      toast.error(message);
+    } finally {
+      setIsUnlocking(false);
+    }
   };
 
   if (loading) {
@@ -412,7 +430,7 @@ function DashboardContent() {
       )
       return
     }
-    
+
     if (!url) {
       toast.error(`No ${type} URL provided for this subject.`);
       return;
@@ -422,14 +440,14 @@ function DashboardContent() {
       window.open(url, '_blank', 'noreferrer');
       return;
     }
-    
+
     setActiveMedia({ type, url, title: subject.subject });
   }
 
   return (
     <main className="min-h-screen bg-background text-foreground p-6 md:p-12">
       <div className="max-w-5xl mx-auto space-y-8">
-        
+
         {/* Profile & Status Header */}
         <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
           <div className="space-y-2">
@@ -440,13 +458,13 @@ function DashboardContent() {
             <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-secondary/50 border border-border text-sm">
               <span className="text-muted-foreground">Active Semesters:</span>
               <span className="text-emerald-500 font-semibold">
-                {(purchasedSemesters || []).length > 0 
-                  ? purchasedSemesters.map((s: string) => s.replace('sem', 'Sem ')).join(', ') 
+                {(purchasedSemesters || []).length > 0
+                  ? purchasedSemesters.map((s: string) => s.replace('sem', 'Sem ')).join(', ')
                   : 'None (Free Plan)'}
               </span>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-3">
             <Link
               href="/"
@@ -474,12 +492,12 @@ function DashboardContent() {
                 {getCurriculumBranch(selectedBranch)} - {selectedYear}{selectedYear === 1 ? 'st' : selectedYear === 2 ? 'nd' : selectedYear === 3 ? 'rd' : 'th'} Year
               </span>
             )}
-            
+
             {/* Progress Indicator */}
             <div className="flex items-center gap-3">
               <div className="h-2 w-24 bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500" 
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-500"
                   style={{ width: `${((purchasedSemesters || []).length / 8) * 100}%` }}
                 />
               </div>
@@ -488,7 +506,7 @@ function DashboardContent() {
               </span>
             </div>
           </div>
-          
+
           {/* Filters */}
           <div className="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-card border border-border shadow-sm">
             <div className="flex-1 space-y-1">
@@ -496,8 +514,8 @@ function DashboardContent() {
                 <Filter className="w-4 h-4" />
                 Year
               </label>
-              <select 
-                value={selectedYear} 
+              <select
+                value={selectedYear}
                 onChange={(e) => {
                   setSelectedYear(Number(e.target.value))
                   setSelectedSemester(null) // Reset semester when year changes
@@ -514,8 +532,8 @@ function DashboardContent() {
                 <BookOpen className="w-4 h-4" />
                 Branch
               </label>
-              <select 
-                value={selectedBranch} 
+              <select
+                value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
@@ -529,8 +547,8 @@ function DashboardContent() {
                 <GraduationCap className="w-4 h-4" />
                 Semester
               </label>
-              <select 
-                value={selectedSemester || ''} 
+              <select
+                value={selectedSemester || ''}
                 onChange={(e) => setSelectedSemester(e.target.value ? Number(e.target.value) : null)}
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary font-semibold text-primary"
               >
@@ -545,7 +563,7 @@ function DashboardContent() {
           {/* Top CTA for Locked Semesters */}
           {!isFetching && displayedSubjects.length > 0 && (() => {
             const displayedSems = Array.from(new Set(displayedSubjects.map((s: any) => s.semester))).sort((a: any, b: any) => a - b);
-            
+
             // A semester is considered "locked" if there are any subjects in it that the user hasn't unlocked yet
             const lockedSems = displayedSems.filter(sem => {
               const semSubjects = subjects.filter(s => s.semester === sem);
@@ -569,7 +587,7 @@ function DashboardContent() {
                 </div>
                 <div className="flex flex-wrap justify-center gap-3">
                   {lockedSems.map(sem => (
-                    <button 
+                    <button
                       key={sem}
                       onClick={() => handleUnlockClick(sem)}
                       disabled={isLoading}
@@ -582,20 +600,20 @@ function DashboardContent() {
               </div>
             );
           })()}
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isFetching ? (
               // Skeleton Loader
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="p-5 rounded-2xl border border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse">
-                   <div className="space-y-3 w-full">
-                     <div className="h-6 bg-secondary rounded w-3/4"></div>
-                     <div className="h-4 bg-secondary rounded w-1/4"></div>
-                   </div>
-                   <div className="flex gap-2 shrink-0 mt-4 sm:mt-0">
-                     <div className="h-10 w-24 bg-secondary rounded-xl"></div>
-                     <div className="h-10 w-24 bg-secondary rounded-xl"></div>
-                   </div>
+                  <div className="space-y-3 w-full">
+                    <div className="h-6 bg-secondary rounded w-3/4"></div>
+                    <div className="h-4 bg-secondary rounded w-1/4"></div>
+                  </div>
+                  <div className="flex gap-2 shrink-0 mt-4 sm:mt-0">
+                    <div className="h-10 w-24 bg-secondary rounded-xl"></div>
+                    <div className="h-10 w-24 bg-secondary rounded-xl"></div>
+                  </div>
                 </div>
               ))
             ) : displayedSubjects.length === 0 ? (
@@ -607,17 +625,17 @@ function DashboardContent() {
                 // Ensure semester is treated as a number and semId is correctly formatted
                 const semNumber = Number(subject.semester);
                 const semId = semNumber ? `sem${semNumber}` : 'locked';
-                
+
                 // Subject is unlocked if its specific ID is in unlockedSubjects
                 // Or if the whole semester was purchased previously (backward compatibility)
                 const isUnlocked = unlockedSubjects?.includes(subject.id) || (semId !== 'locked' && (purchasedSemesters || []).includes(semId)) || isGoogleDriveUrl(subject.notesURL) || isGoogleDriveUrl(subject.videoURL);
 
                 return (
-                  <div 
-                    key={subject.id} 
+                  <div
+                    key={subject.id}
                     className={`group relative p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden
-                      ${isUnlocked 
-                        ? 'bg-card border-border hover:border-primary/30 hover:shadow-md' 
+                      ${isUnlocked
+                        ? 'bg-card border-border hover:border-primary/30 hover:shadow-md'
                         : 'bg-secondary/20 border-border/50'}`}
                   >
                     {/* Subject name — always visible and clear */}
@@ -649,7 +667,7 @@ function DashboardContent() {
                               Video
                             </a>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => handleAccess('video', subject, subject.semester, subject.videoURL)}
                               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-sm font-medium"
                             >
@@ -669,7 +687,7 @@ function DashboardContent() {
                               Notes
                             </a>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => handleAccess('notes', subject, subject.semester, subject.notesURL)}
                               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white transition-all text-sm font-medium"
                             >
@@ -679,7 +697,7 @@ function DashboardContent() {
                           )}
                         </>
                       ) : (
-                        <button 
+                        <button
                           onClick={() => handleUnlockClick(subject.semester)}
                           disabled={isLoading}
                           className="group/lock flex-1 sm:flex-none inline-flex items-center justify-center gap-3 px-6 py-2.5 rounded-xl bg-secondary/80 border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm"
@@ -701,19 +719,19 @@ function DashboardContent() {
             )}
           </div>
         </div>
-        
+
       </div>
 
       {/* Subject Selection Modal */}
-      <Dialog 
-        open={selectionModal.open} 
+      <Dialog
+        open={selectionModal.open}
         onOpenChange={(open) => !open && setSelectionModal(prev => ({ ...prev, open: false }))}
       >
         <DialogContent className="max-w-2xl bg-card border-border shadow-2xl overflow-hidden">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-2xl font-bold">Select Subjects to Unlock</DialogTitle>
             <DialogDescription className="text-base">
-              Year {selectedYear} students must select **exactly {getRequiredCount(selectedYear)} subjects** to unlock for ₹29.
+              Year {selectedYear} students must select exactly {getRequiredCount(selectedYear)} subjects to unlock for free.
             </DialogDescription>
           </DialogHeader>
 
@@ -728,10 +746,10 @@ function DashboardContent() {
                   disabled={isAlreadyUnlocked}
                   onClick={() => toggleSubjectSelection(subject.id)}
                   className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left
-                    ${isAlreadyUnlocked 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 cursor-not-allowed opacity-60' 
-                      : isSelected 
-                        ? 'bg-primary/10 border-primary shadow-sm ring-1 ring-primary/20' 
+                    ${isAlreadyUnlocked
+                      ? 'bg-emerald-500/10 border-emerald-500/30 cursor-not-allowed opacity-60'
+                      : isSelected
+                        ? 'bg-primary/10 border-primary shadow-sm ring-1 ring-primary/20'
                         : 'bg-secondary/20 border-border hover:border-primary/50'}`}
                 >
                   <div className="min-w-0">
@@ -743,10 +761,10 @@ function DashboardContent() {
                     </p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                    ${isAlreadyUnlocked 
-                      ? 'bg-emerald-500 border-emerald-500 text-white' 
-                      : isSelected 
-                        ? 'bg-primary border-primary text-white' 
+                    ${isAlreadyUnlocked
+                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                      : isSelected
+                        ? 'bg-primary border-primary text-white'
                         : 'border-border'}`}
                   >
                     {(isSelected || isAlreadyUnlocked) && <div className="w-2 h-2 bg-white rounded-full" />}
@@ -756,74 +774,28 @@ function DashboardContent() {
             })}
           </div>
 
-            <div className="flex-1 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Coupon Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter coupon (e.g. SAVE90)"
-                    value={couponCode}
-                    onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
-                      setCouponCode(val);
-                      setIsCouponValid(['SAVE90', 'OFF90', 'EXAM90'].includes(val));
-                    }}
-                    className="flex-1 h-11 px-4 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all uppercase font-mono"
-                  />
-                  {isCouponValid && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 text-sm font-bold">
-                      <Sparkles className="w-4 h-4" />
-                      Applied
-                    </div>
-                  )}
-                </div>
+          <div className="flex-1 space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-border/50">
+              <div className="text-center sm:text-left">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
+                <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
+                </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-border/50">
-                <div className="text-center sm:text-left">
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
-                  <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
-                    {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
-                  </p>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                  <div className="flex flex-col gap-3 w-full">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
-                      <Zap className="w-3 h-3 text-emerald-500" />
-                      Supported: GPay, PhonePe, Paytm, & more
-                    </div>
-                    <button
-                      disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
-                      onClick={() => handleConfirmUnlock('upi')}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-emerald-600/20"
-                    >
-                      {isLoading ? 'Processing...' : (
-                        <>
-                          <Zap className="w-5 h-5 fill-current" />
-                          Pay via UPI
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-3 w-full pt-[21px]">
-                    <button
-                      disabled={isLoading || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
-                      onClick={() => handleConfirmUnlock('card')}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
-                    >
-                      {isLoading ? 'Processing...' : (
-                        <>
-                          <CreditCard className="w-5 h-5" />
-                          Other Methods
-                        </>
-                      )}
-                    </button>
-                  </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="flex flex-col gap-3 w-full sm:w-auto pt-[12px]">
+                  <button
+                    disabled={isUnlocking || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
+                    onClick={handleConfirmUnlock}
+                    className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
+                  >
+                    {isUnlocking ? 'Unlocking...' : 'Confirm Unlock'}
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -840,10 +812,10 @@ function DashboardContent() {
           </DialogHeader>
           <div className="flex-1 rounded-xl overflow-hidden border border-border bg-black/5 relative w-full h-full">
             {activeMedia.url ? (
-              <iframe 
-                src={activeMedia.url} 
-                className="absolute inset-0 w-full h-full border-0 rounded-xl" 
-                allow="autoplay; fullscreen; encrypted-media" 
+              <iframe
+                src={activeMedia.url}
+                className="absolute inset-0 w-full h-full border-0 rounded-xl"
+                allow="autoplay; fullscreen; encrypted-media"
                 title={activeMedia.title}
               />
             ) : (

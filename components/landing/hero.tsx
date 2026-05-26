@@ -7,12 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/src/AuthContext";
-import { useRazorpay } from "@/src/hooks/useRazorpay";
 
 export function Hero() {
   const router = useRouter();
   const { user, isPaid, purchasedSemesters, loading, login } = useAuth() as any;
-  const { startPayment, isLoading } = useRazorpay();
 
   const handleGoogleLogin = async () => {
     try {
