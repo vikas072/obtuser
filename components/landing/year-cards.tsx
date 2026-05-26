@@ -8,6 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 const secondYearCurriculum = [
   {
+    branch: "IT",
+    year: "2nd Year",
+    subjects: [
+      "Data Structure",
+      "Computer Organization & Architecture (COA)",
+      "Python Programming",
+      "DSTL",
+      "Mathematics IV",
+      "Technical Communication",
+      "Human Values",
+      "Cyber Security",
+      "Digital Electronics",
+      "Object Oriented Programming with Java (OOP with Java)",
+      "TAFL (Theory of Automata & Formal Languages)",
+      "Operating System",
+    ],
+  },
+  {
     branch: "Mechanical Engineering",
     year: "2nd Year",
     subjects: [
@@ -83,7 +101,7 @@ const secondYearCurriculum = [
 
 const thirdYearCurriculum = [
   {
-    branch: "CSE & Allied",
+    branch: "IT",
     year: "3rd Year",
     subjects: [
       "Constitution of India",

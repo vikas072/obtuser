@@ -22,8 +22,7 @@ const firstYearSubjects = [
 ]
 
 const firstYearBranchSubjects: Record<string, string[]> = {
-  'CSE & Allied': firstYearSubjects,
-  CSE: firstYearSubjects,
+  'IT': firstYearSubjects,
   ECE: firstYearSubjects,
   EEE: firstYearSubjects,
   'Mechanical Engineering': firstYearSubjects,
@@ -31,21 +30,7 @@ const firstYearBranchSubjects: Record<string, string[]> = {
 }
 
 const secondYearBranchSubjects: Record<string, string[]> = {
-  'CSE & Allied': [
-    'Data Structure',
-    'Computer Organization & Architecture (COA)',
-    'Python Programming',
-    'DSTL',
-    'Mathematics IV',
-    'Technical Communication',
-    'Human Values',
-    'Cyber Security',
-    'Digital Electronics',
-    'Object Oriented Programming with Java (OOP with Java)',
-    'TAFL (Theory of Automata & Formal Languages)',
-    'Operating System',
-  ],
-  CSE: [
+  'IT': [
     'Data Structure',
     'Computer Organization & Architecture (COA)',
     'Python Programming',
@@ -118,7 +103,7 @@ const secondYearBranchSubjects: Record<string, string[]> = {
 }
 
 const thirdYearBranchSubjects: Record<string, string[]> = {
-  'CSE & Allied': [
+  'IT': [
     'Constitution of India',
     'Essence of Indian Traditional Knowledge',
     'DBMS',
@@ -175,9 +160,12 @@ const curriculumSubjectsByYear: Record<number, Record<string, string[]>> = {
 }
 
 const branchAliases: Record<string, string> = {
-  'CSE & ALLIED': 'CSE & Allied',
-  CSE: 'CSE & Allied',
-  Allied: 'CSE & Allied',
+  'CSE & ALLIED': 'IT',
+  'CSE & Allied': 'IT',
+  CSE: 'IT',
+  Allied: 'IT',
+  IT: 'IT',
+  'IT & ALLIED': 'IT',
   Mechanical: 'Mechanical Engineering',
   MECHANICAL: 'Mechanical Engineering',
   Civil: 'Civil Engineering',
@@ -217,7 +205,7 @@ function DashboardContent() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
 
   const initialYear = Number(searchParams.get('year')) || 1
-  const initialBranch = getCurriculumBranch(searchParams.get('branch') || 'CSE & Allied')
+  const initialBranch = getCurriculumBranch(searchParams.get('branch') || 'IT')
   const initialSemester = Number(searchParams.get('semester')) || null
 
   const [selectedYear, setSelectedYear] = useState<number>(initialYear)
@@ -231,7 +219,7 @@ function DashboardContent() {
 
   const [activeMedia, setActiveMedia] = useState<{ type: 'video' | 'notes' | null; url: string; title: string }>({ type: null, url: '', title: '' })
 
-  const branches = ['CSE & Allied', 'CSE', 'ECE', 'EEE', 'Mechanical Engineering', 'Civil Engineering']
+  const branches = ['IT', 'ECE', 'EEE', 'Mechanical Engineering', 'Civil Engineering']
   const years = [1, 2, 3, 4]
   const semestersForYear = selectedYear ? [selectedYear * 2 - 1, selectedYear * 2] : []
 
@@ -250,11 +238,17 @@ function DashboardContent() {
           return;
         }
 
-        const q = query(
-          collection(db as any, 'content'),
-          where('year', '==', selectedYear),
-          where('branch', '==', selectedBranchCanonical)
-        );
+        const q = selectedBranchCanonical === 'IT'
+          ? query(
+              collection(db as any, 'content'),
+              where('year', '==', selectedYear),
+              where('branch', 'in', ['IT', 'CSE', 'Allied'])
+            )
+          : query(
+              collection(db as any, 'content'),
+              where('year', '==', selectedYear),
+              where('branch', '==', selectedBranchCanonical)
+            );
 
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -262,7 +256,7 @@ function DashboardContent() {
         // Deduplicate and sort alphabetically by subject name
         const uniqueData = Array.from(new Map(data.map((item: any) => [`${item.subject}-${item.semester}`, item])).values()) as any[];
 
-        if (selectedYear === 1 && selectedBranchCanonical === 'CSE & Allied' && !uniqueData.some((item: any) => item.subject === 'Engineering Chemistry')) {
+        if (selectedYear === 1 && selectedBranchCanonical === 'IT' && !uniqueData.some((item: any) => item.subject === 'Engineering Chemistry')) {
           uniqueData.push({
             id: 'engineering-chemistry-drive',
             year: 1,
@@ -311,12 +305,19 @@ function DashboardContent() {
       }
 
       // Explicitly fetch all subjects for the year/branch/semester to ensure correct selection in modal
-      const q = query(
-        collection(db as any, 'content'),
-        where('year', '==', selectedYear),
-        where('branch', '==', selectedBranchCanonical),
-        where('semester', '==', semester)
-      );
+      const q = selectedBranchCanonical === 'IT'
+        ? query(
+            collection(db as any, 'content'),
+            where('year', '==', selectedYear),
+            where('branch', 'in', ['IT', 'CSE', 'Allied']),
+            where('semester', '==', semester)
+          )
+        : query(
+            collection(db as any, 'content'),
+            where('year', '==', selectedYear),
+            where('branch', '==', selectedBranchCanonical),
+            where('semester', '==', semester)
+          );
 
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -344,9 +345,9 @@ function DashboardContent() {
       if (prev.includes(id)) {
         return prev.filter(sid => sid !== id);
       }
-      const limit = getRequiredCount(selectedYear);
+      const limit = Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length);
       if (prev.length >= limit) {
-        toast.error(`You can only select exactly ${limit} subjects for Year ${selectedYear}.`);
+        toast.error(`You can only select exactly ${limit} subjects.`);
         return prev;
       }
       return [...prev, id];
@@ -354,7 +355,7 @@ function DashboardContent() {
   };
 
   const handleConfirmUnlock = async () => {
-    const limit = getRequiredCount(selectedYear);
+    const limit = Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length);
     if (selectedSubjectIds.length !== limit) {
       toast.error(`Please select exactly ${limit} subjects.`);
       return;
@@ -590,7 +591,7 @@ function DashboardContent() {
                     <button
                       key={sem}
                       onClick={() => handleUnlockClick(sem)}
-                      disabled={isLoading}
+                      disabled={isFetching || isUnlocking}
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60 scale-100 hover:scale-105 active:scale-95"
                     >
                       Unlock Sem {sem}
@@ -699,7 +700,7 @@ function DashboardContent() {
                       ) : (
                         <button
                           onClick={() => handleUnlockClick(subject.semester)}
-                          disabled={isLoading}
+                          disabled={isFetching || isUnlocking}
                           className="group/lock flex-1 sm:flex-none inline-flex items-center justify-center gap-3 px-6 py-2.5 rounded-xl bg-secondary/80 border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm"
                         >
                           <div className="relative">
@@ -731,7 +732,7 @@ function DashboardContent() {
           <DialogHeader className="mb-4">
             <DialogTitle className="text-2xl font-bold">Select Subjects to Unlock</DialogTitle>
             <DialogDescription className="text-base">
-              Year {selectedYear} students must select exactly {getRequiredCount(selectedYear)} subjects to unlock for free.
+              Year {selectedYear} students must select exactly {Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length)} subjects to unlock for free.
             </DialogDescription>
           </DialogHeader>
 
@@ -778,15 +779,15 @@ function DashboardContent() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-border/50">
               <div className="text-center sm:text-left">
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Selected Subjects</p>
-                <p className={`text-2xl font-bold ${selectedSubjectIds.length === getRequiredCount(selectedYear) ? 'text-emerald-500' : 'text-amber-500'}`}>
-                  {selectedSubjectIds.length} / {getRequiredCount(selectedYear)}
+                <p className={`text-2xl font-bold ${selectedSubjectIds.length === Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  {selectedSubjectIds.length} / {Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length)}
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <div className="flex flex-col gap-3 w-full sm:w-auto pt-[12px]">
                   <button
-                    disabled={isUnlocking || selectedSubjectIds.length !== getRequiredCount(selectedYear)}
+                    disabled={isUnlocking || selectedSubjectIds.length !== Math.min(getRequiredCount(selectedYear), selectionModal.subjects.length)}
                     onClick={handleConfirmUnlock}
                     className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
                   >
